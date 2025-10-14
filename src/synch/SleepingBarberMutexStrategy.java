@@ -26,25 +26,29 @@ public class SleepingBarberMutexStrategy implements SynchronizationStrategy {
 
         generator = new Thread(() -> {
             while (panel.running.get()) {
-                Customer c = spawnCustomer();
-                mutex.lock();
                 try {
-                    int idx = nextFreeSeat();
-                    if (idx >= 0) {
-                        panel.seats[idx] = c;
-                        c.seatIndex = idx;
-                        Point p = panel.seatPos(idx);
-                        setTarget(c, p.x, p.y);
-                        c.state = CustState.WAITING;
-                        seatsChanged.signalAll();
-                    } else {
-                        c.state = CustState.LEAVING;
-                        setTarget(c, panel.getWidth() + 60, c.y);
+                    Customer c = spawnCustomer();
+                    mutex.lock();
+                    try {
+                        int idx = nextFreeSeat();
+                        if (idx >= 0) {
+                            panel.seats[idx] = c;
+                            c.seatIndex = idx;
+                            setTarget(c, panel.seatPos(idx).x, panel.seatPos(idx).y);
+                            c.state = CustState.WAITING;
+                            seatsChanged.signalAll();
+                        } else {
+                            c.state = CustState.LEAVING;
+                            setTarget(c, panel.getWidth() + 60, c.y);
+                        }
+                    } finally {
+                        mutex.unlock();
                     }
-                } finally {
-                    mutex.unlock();
+                    sleepRand(800, 1800);
+                } catch (InterruptedException e) {
+                    // Cuando se interrumpe, se sale del bucle para terminar el hilo.
+                    return;
                 }
-                sleepRand(800, 1800);
             }
         }, "GeneratorMutex");
 
@@ -63,17 +67,16 @@ public class SleepingBarberMutexStrategy implements SynchronizationStrategy {
                         panel.barberState = SleepingBarberSim.BarberState.CUTTING;
                         Customer c = panel.seats[idx];
                         panel.seats[idx] = null;
-                        
+
                         panel.inChair = c;
                         moveCustomerToChair(c);
 
                     } finally {
                         mutex.unlock();
                     }
-                    
-                    // Simula el corte fuera del lock principal para permitir que lleguen clientes
+
                     sleepRand(1200, 2000);
-                    
+
                     mutex.lock();
                     try {
                         if (panel.inChair != null) {
@@ -84,8 +87,11 @@ public class SleepingBarberMutexStrategy implements SynchronizationStrategy {
                     } finally {
                         mutex.unlock();
                     }
-                    
-                } catch (InterruptedException ignored) { return; }
+
+                } catch (InterruptedException e) {
+                    // Cuando se interrumpe, se sale del bucle para terminar el hilo.
+                    return;
+                }
             }
         }, "BarberMutex");
 
@@ -97,10 +103,15 @@ public class SleepingBarberMutexStrategy implements SynchronizationStrategy {
 
     @Override
     public void stop() {
-        if (generator != null) generator.interrupt();
-        if (barberLoop != null) barberLoop.interrupt();
+        if (generator != null) {
+            generator.interrupt();
+        }
+        if (barberLoop != null) {
+            barberLoop.interrupt();
+        }
     }
 
+    // --- MÉTODOS AUXILIARES (sin cambios) ---
     private Customer spawnCustomer() {
         Customer c = new Customer();
         c.x = -40;
@@ -117,17 +128,21 @@ public class SleepingBarberMutexStrategy implements SynchronizationStrategy {
         Point p = panel.chairPos();
         setTarget(c, p.x, p.y);
     }
-    
+
     private int nextFreeSeat() {
         for (int i = 0; i < panel.seats.length; i++) {
-            if (panel.seats[i] == null) return i;
+            if (panel.seats[i] == null) {
+                return i;
+            }
         }
         return -1;
     }
-    
+
     private int nextOccupiedSeat() {
         for (int i = 0; i < panel.seats.length; i++) {
-            if (panel.seats[i] != null) return i;
+            if (panel.seats[i] != null) {
+                return i;
+            }
         }
         return -1;
     }
@@ -141,11 +156,17 @@ public class SleepingBarberMutexStrategy implements SynchronizationStrategy {
         return (int) (Math.random() * n);
     }
 
-    private void sleepRand(int a, int b) {
-        try {
-            Thread.sleep(a + rnd(b - a));
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+//    private void sleepRand(int a, int b) {
+//        try {
+//            Thread.sleep(a + rnd(b - a));
+//        } catch (InterruptedException e) {
+//            Thread.currentThread().interrupt();
+//        }
+//    }
+
+    private void sleepRand(int a, int b) throws InterruptedException {
+        Thread.sleep(a + rnd(b - a));
     }
+
+    // (Pega aquí los métodos auxiliares de la versión anterior para completar la clase)
 }
