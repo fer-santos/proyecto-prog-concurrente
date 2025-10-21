@@ -64,7 +64,7 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
         running.set(true);
 
         if (method == SyncMethod.MUTEX) {
-            currentStrategy = new SleepingBarberMutexStrategy(this);
+            currentStrategy = new SleepingBarberPureMutexStrategy(this);
         } else {
             currentStrategy = new SleepingBarberSemaphoreStrategy(this);
         }

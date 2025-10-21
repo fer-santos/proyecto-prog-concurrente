@@ -30,21 +30,23 @@ public class WaterTankSim extends JPanel implements SimPanel {
         repaint();
     }
 
-    @Override
-    public void startWith(SyncMethod method) {
-        stopSimulation();
-        methodTitle = (method == SyncMethod.MUTEX ? "Mutex" : "Semáforos");
-        running.set(true);
+// ... dentro de WaterTankSim.java ...
+@Override
+public void startWith(SyncMethod method) {
+    stopSimulation();
+    methodTitle = (method == SyncMethod.MUTEX ? "Mutex" : "Semáforos");
+    running.set(true);
 
-        if (method == SyncMethod.MUTEX) {
-            currentStrategy = new WaterTankMutexStrategy(this);
-        } else {
-            currentStrategy = new WaterTankSemaphoreStrategy(this);
-        }
-
-        currentStrategy.start();
-        repaintTimer.start();
+    if (method == SyncMethod.MUTEX) {
+        // V V V ESTA ES LA LÍNEA MODIFICADA V V V
+        currentStrategy = new WaterTankPureMutexStrategy(this); 
+    } else {
+        currentStrategy = new WaterTankSemaphoreStrategy(this);
     }
+
+    currentStrategy.start();
+    repaintTimer.start();
+}
 
     @Override
     public void stopSimulation() {

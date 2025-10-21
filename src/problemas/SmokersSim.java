@@ -49,7 +49,7 @@ public class SmokersSim extends JPanel implements SimPanel {
         running.set(true);
 
         if (method == SyncMethod.MUTEX) {
-            currentStrategy = new SmokersMutexStrategy(this);
+            currentStrategy = new SmokersPureMutexStrategy(this);
         } else {
             currentStrategy = new SmokersSemaphoreStrategy(this);
         }
