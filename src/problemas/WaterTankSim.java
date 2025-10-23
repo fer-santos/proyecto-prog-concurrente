@@ -31,22 +31,34 @@ public class WaterTankSim extends JPanel implements SimPanel {
     }
 
 // ... dentro de WaterTankSim.java ...
-@Override
-public void startWith(SyncMethod method) {
-    stopSimulation();
-    methodTitle = (method == SyncMethod.MUTEX ? "Mutex" : "Semáforos");
-    running.set(true);
+    @Override
+    public void startWith(SyncMethod method) {
+        stopSimulation();
 
-    if (method == SyncMethod.MUTEX) {
-        // V V V ESTA ES LA LÍNEA MODIFICADA V V V
-        currentStrategy = new WaterTankPureMutexStrategy(this); 
-    } else {
-        currentStrategy = new WaterTankSemaphoreStrategy(this);
+        // --- Lógica de Título Actualizada ---
+        if (method == SyncMethod.MUTEX) {
+            methodTitle = "Mutex (Espera Activa)";
+        } else if (method == SyncMethod.SEMAPHORES) {
+            methodTitle = "Semáforos";
+        } else if (method == SyncMethod.VAR_COND) {
+            methodTitle = "Variable Condición";
+        }
+
+        running.set(true);
+
+        // --- Lógica de Estrategia Actualizada ---
+        if (method == SyncMethod.MUTEX) {
+            currentStrategy = new WaterTankPureMutexStrategy(this);
+        } else if (method == SyncMethod.SEMAPHORES) {
+            currentStrategy = new WaterTankSemaphoreStrategy(this);
+        } else if (method == SyncMethod.VAR_COND) {
+            // --- ESTA ES LA LÍNEA NUEVA ---
+            currentStrategy = new WaterTankConditionStrategy(this);
+        }
+
+        currentStrategy.start();
+        repaintTimer.start();
     }
-
-    currentStrategy.start();
-    repaintTimer.start();
-}
 
     @Override
     public void stopSimulation() {

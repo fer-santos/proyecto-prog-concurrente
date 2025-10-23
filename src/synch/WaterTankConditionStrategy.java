@@ -4,13 +4,14 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import problemas.WaterTankSim;
 
-public class WaterTankMutexStrategy implements SynchronizationStrategy {
+// NOTA: Esta es la implementación del patrón MONITOR (Mutex + Condition)
+public class WaterTankConditionStrategy implements SynchronizationStrategy {
     private final WaterTankSim panel;
     private Thread producer, consumer;
     private ReentrantLock mtxPC;
     private Condition notEmpty, notFull;
 
-    public WaterTankMutexStrategy(WaterTankSim panel) {
+    public WaterTankConditionStrategy(WaterTankSim panel) {
         this.panel = panel;
     }
 
@@ -26,17 +27,17 @@ public class WaterTankMutexStrategy implements SynchronizationStrategy {
                     mtxPC.lock();
                     try {
                         while (panel.level == WaterTankSim.SLOTS) {
-                            notFull.await();
+                            notFull.await(); // Espera si está lleno
                         }
                         panel.level++;
-                        notEmpty.signal();
+                        notEmpty.signal(); // Avisa que ya no está vacío
                     } finally {
                         mtxPC.unlock();
                     }
                     Thread.sleep(180 + (int) (Math.random() * 220));
                 } catch (InterruptedException ignored) { return; }
             }
-        }, "Producer-Mutex");
+        }, "Producer-Condition"); // Nombre del Hilo cambiado
 
         consumer = new Thread(() -> {
             while (panel.running.get()) {
@@ -44,17 +45,17 @@ public class WaterTankMutexStrategy implements SynchronizationStrategy {
                     mtxPC.lock();
                     try {
                         while (panel.level == 0) {
-                            notEmpty.await();
+                            notEmpty.await(); // Espera si está vacío
                         }
                         panel.level--;
-                        notFull.signal();
+                        notFull.signal(); // Avisa que ya no está lleno
                     } finally {
                         mtxPC.unlock();
                     }
                     Thread.sleep(180 + (int) (Math.random() * 220));
                 } catch (InterruptedException ignored) { return; }
             }
-        }, "Consumer-Mutex");
+        }, "Consumer-Condition"); // Nombre del Hilo cambiado
 
         producer.setDaemon(true);
         consumer.setDaemon(true);
