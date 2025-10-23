@@ -57,6 +57,8 @@ public class PhilosophersSim extends JPanel implements SimPanel {
             methodTitle = "Semáforos (Camarero)";
         } else if (method == SyncMethod.VAR_COND) {
             methodTitle = "Variable Condición";
+        } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
+            methodTitle = "Monitores";             // <-- NUEVO TÍTULO
         }
 
         running.set(true);
@@ -67,12 +69,19 @@ public class PhilosophersSim extends JPanel implements SimPanel {
         } else if (method == SyncMethod.SEMAPHORES) {
             currentStrategy = new PhilosophersSemaphoreStrategy(this);
         } else if (method == SyncMethod.VAR_COND) {
-            // --- ESTA ES LA LÍNEA NUEVA ---
             currentStrategy = new PhilosophersConditionStrategy(this);
+        } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
+            // --- ESTA ES LA LÍNEA NUEVA ---
+            currentStrategy = new PhilosophersMonitorStrategy(this);
         }
 
-        currentStrategy.start();
-        repaintTimer.start();
+        // Asegurarse de que currentStrategy no sea null
+        if (currentStrategy != null) {
+            currentStrategy.start();
+            repaintTimer.start();
+        } else {
+            System.err.println("Método de sincronización no implementado para este problema: " + method);
+        }
     }
 
     @Override
