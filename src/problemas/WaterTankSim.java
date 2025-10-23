@@ -42,6 +42,8 @@ public class WaterTankSim extends JPanel implements SimPanel {
             methodTitle = "Semáforos";
         } else if (method == SyncMethod.VAR_COND) {
             methodTitle = "Variable Condición";
+        } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
+            methodTitle = "Monitores";             // <-- NUEVO TÍTULO
         }
 
         running.set(true);
@@ -52,12 +54,20 @@ public class WaterTankSim extends JPanel implements SimPanel {
         } else if (method == SyncMethod.SEMAPHORES) {
             currentStrategy = new WaterTankSemaphoreStrategy(this);
         } else if (method == SyncMethod.VAR_COND) {
-            // --- ESTA ES LA LÍNEA NUEVA ---
             currentStrategy = new WaterTankConditionStrategy(this);
+        } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
+            // --- ESTA ES LA LÍNEA NUEVA ---
+            currentStrategy = new WaterTankMonitorStrategy(this);
         }
 
-        currentStrategy.start();
-        repaintTimer.start();
+        // Asegurarse de que currentStrategy no sea null si se añade un nuevo método no implementado
+        if (currentStrategy != null) {
+            currentStrategy.start();
+            repaintTimer.start();
+        } else {
+            // Opcional: Mostrar un mensaje si el método no está mapeado
+            System.err.println("Método de sincronización no implementado para este problema: " + method);
+        }
     }
 
     @Override

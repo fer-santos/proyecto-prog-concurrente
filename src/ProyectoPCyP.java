@@ -116,7 +116,7 @@ public class ProyectoPCyP extends JFrame {
         mutex.addActionListener(e -> selectMethod(SyncMethod.MUTEX));
         semaforos.addActionListener(e -> selectMethod(SyncMethod.SEMAPHORES));
         varCon.addActionListener(e -> selectMethod(SyncMethod.VAR_COND));
-        monitores.addActionListener(e -> methodNotImplementedYet("Monitores"));
+        monitores.addActionListener(e -> selectMethod(SyncMethod.MONITORS)); // <-- LÍNEA MODIFICADA
         barreras.addActionListener(e -> methodNotImplementedYet("Barreras"));
     }
 
