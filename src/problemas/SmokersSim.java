@@ -59,23 +59,32 @@ public class SmokersSim extends JPanel implements SimPanel {
             methodTitle = "Semáforos (Agente)";
         } else if (method == SyncMethod.VAR_COND) {
             methodTitle = "Variable Condición";
-        } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
-            methodTitle = "Monitores";             // <-- NUEVO TÍTULO
+        } else if (method == SyncMethod.MONITORS) {
+            methodTitle = "Monitores";
+        } else if (method == SyncMethod.BARRIERS) { // <-- NUEVO ELSE IF
+            methodTitle = "Barreras";      // <-- NUEVO TÍTULO
         }
 
         running.set(true);
 
         // --- Lógica de Estrategia Actualizada ---
+        // Variable temporal
+        SynchronizationStrategy tempStrategy = null;
+
         if (method == SyncMethod.MUTEX) {
-            currentStrategy = new SmokersPureMutexStrategy(this);
+            tempStrategy = new SmokersPureMutexStrategy(this);
         } else if (method == SyncMethod.SEMAPHORES) {
-            currentStrategy = new SmokersSemaphoreStrategy(this);
+            tempStrategy = new SmokersSemaphoreStrategy(this);
         } else if (method == SyncMethod.VAR_COND) {
-            currentStrategy = new SmokersConditionStrategy(this);
-        } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
+            tempStrategy = new SmokersConditionStrategy(this);
+        } else if (method == SyncMethod.MONITORS) {
+            tempStrategy = new SmokersMonitorStrategy(this);
+        } else if (method == SyncMethod.BARRIERS) { // <-- NUEVO ELSE IF
             // --- ESTA ES LA LÍNEA NUEVA ---
-            currentStrategy = new SmokersMonitorStrategy(this);
+            tempStrategy = new SmokersBarrierStrategy(this);
         }
+
+        currentStrategy = tempStrategy; // Asigna a la variable de instancia
 
         // Asegurarse de que currentStrategy no sea null
         if (currentStrategy != null) {
@@ -83,6 +92,8 @@ public class SmokersSim extends JPanel implements SimPanel {
             repaintTimer.start();
         } else {
             System.err.println("Método de sincronización no implementado para este problema: " + method);
+            methodTitle = "NO IMPLEMENTADO";
+            repaint();
         }
     }
 
