@@ -57,23 +57,33 @@ public class PhilosophersSim extends JPanel implements SimPanel {
             methodTitle = "Semáforos (Camarero)";
         } else if (method == SyncMethod.VAR_COND) {
             methodTitle = "Variable Condición";
-        } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
-            methodTitle = "Monitores";             // <-- NUEVO TÍTULO
+        } else if (method == SyncMethod.MONITORS) {
+            methodTitle = "Monitores";
+        } else if (method == SyncMethod.BARRIERS) { // <-- NUEVO ELSE IF
+            methodTitle = "Barreras (Propenso a Deadlock)"; // <-- NUEVO TÍTULO (con advertencia)
+            methodTitle = "Barreras";
         }
 
         running.set(true);
 
         // --- Lógica de Estrategia Actualizada ---
+        // Variable temporal
+        SynchronizationStrategy tempStrategy = null;
+
         if (method == SyncMethod.MUTEX) {
-            currentStrategy = new PhilosophersMutexStrategy(this);
+            tempStrategy = new PhilosophersMutexStrategy(this);
         } else if (method == SyncMethod.SEMAPHORES) {
-            currentStrategy = new PhilosophersSemaphoreStrategy(this);
+            tempStrategy = new PhilosophersSemaphoreStrategy(this);
         } else if (method == SyncMethod.VAR_COND) {
-            currentStrategy = new PhilosophersConditionStrategy(this);
-        } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
+            tempStrategy = new PhilosophersConditionStrategy(this);
+        } else if (method == SyncMethod.MONITORS) {
+            tempStrategy = new PhilosophersMonitorStrategy(this);
+        } else if (method == SyncMethod.BARRIERS) { // <-- NUEVO ELSE IF
             // --- ESTA ES LA LÍNEA NUEVA ---
-            currentStrategy = new PhilosophersMonitorStrategy(this);
+            tempStrategy = new PhilosophersBarrierStrategy(this);
         }
+
+        currentStrategy = tempStrategy; // Asigna a la variable de instancia
 
         // Asegurarse de que currentStrategy no sea null
         if (currentStrategy != null) {
@@ -81,6 +91,8 @@ public class PhilosophersSim extends JPanel implements SimPanel {
             repaintTimer.start();
         } else {
             System.err.println("Método de sincronización no implementado para este problema: " + method);
+            methodTitle = "NO IMPLEMENTADO";
+            repaint();
         }
     }
 
