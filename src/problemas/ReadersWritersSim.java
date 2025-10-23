@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.Timer;
+import synch.ReadersWritersConditionStrategy;
 import synch.ReadersWritersMutexStrategy;     // <-- AÑADIDO: Para poder usar la estrategia Mutex
 import synch.ReadersWritersSemaphoreStrategy; // <-- AÑADIDO: Para poder usar la estrategia Semáforo
 import synch.ReadersWritersStrategy;          // <-- AÑADIDO: Para poder hacer el 'cast'
@@ -63,23 +64,39 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
         repaint();
     }
 
-    @Override
-    public void startWith(SyncMethod method) {
-        stopSimulation();
-        resetState();
-        methodTitle = (method == SyncMethod.MUTEX ? "Mutex" : "Semáforos");
-        running.set(true);
-
-        // ESTO AHORA FUNCIONARÁ GRACIAS A LOS IMPORTS
-        if (method == SyncMethod.MUTEX) {
-            currentStrategy = new ReadersWritersMutexStrategy(this);
-        } else {
-            currentStrategy = new ReadersWritersSemaphoreStrategy(this);
-        }
-        
-        currentStrategy.start();
-        timer.start();
+@Override
+public void startWith(SyncMethod method) {
+    stopSimulation();
+    resetState();
+    
+    // --- Lógica de Título Actualizada ---
+    if(method == SyncMethod.MUTEX) {
+        methodTitle = "Mutex (Solo 1 a la vez)"; // Título más descriptivo
+    } else if (method == SyncMethod.SEMAPHORES) {
+        methodTitle = "Semáforos (Pref. Lectores)"; // Título más descriptivo
+    } else if (method == SyncMethod.VAR_COND) {
+        methodTitle = "Variable Condición";
     }
+    
+    running.set(true);
+
+    // --- Lógica de Estrategia Actualizada ---
+    if (method == SyncMethod.MUTEX) {
+        currentStrategy = new ReadersWritersMutexStrategy(this);
+    } else if (method == SyncMethod.SEMAPHORES) {
+        currentStrategy = new ReadersWritersSemaphoreStrategy(this);
+    } else if (method == SyncMethod.VAR_COND) {
+        // --- ESTA ES LA LÍNEA NUEVA ---
+        currentStrategy = new ReadersWritersConditionStrategy(this);
+    }
+    
+    // Asegúrate de que currentStrategy sea del tipo correcto si necesitas
+    // llamar a métodos específicos como requestAccess.
+    // El cast ya estaba en tu código original, así que debería estar bien.
+    
+    currentStrategy.start();
+    timer.start(); // Asegúrate de iniciar el timer
+}
 
     @Override
     public void stopSimulation() {
