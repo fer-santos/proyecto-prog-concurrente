@@ -9,14 +9,20 @@ import javax.swing.*;
 import synch.*;
 
 public class SmokersSim extends JPanel implements SimPanel {
-    public enum Ing { TABACO, PAPEL, CERILLOS }
-    public enum SState { ESPERANDO, ARMANDO, FUMANDO }
+
+    public enum Ing {
+        TABACO, PAPEL, CERILLOS
+    }
+
+    public enum SState {
+        ESPERANDO, ARMANDO, FUMANDO
+    }
 
     public final AtomicBoolean running = new AtomicBoolean(false);
     public volatile Ing i1 = null, i2 = null;
     public volatile int activeSmoker = -1; // -1: nadie, 0: T, 1: P, 2: C
     public final SState[] sstate = {SState.ESPERANDO, SState.ESPERANDO, SState.ESPERANDO};
-    
+
     private final Timer repaintTimer = new Timer(60, e -> repaint());
     private String methodTitle = "";
     private SynchronizationStrategy currentStrategy;
@@ -32,7 +38,7 @@ public class SmokersSim extends JPanel implements SimPanel {
             sstate[i] = SState.ESPERANDO;
         }
     }
-    
+
     @Override
     public void showSkeleton() {
         stopSimulation();
@@ -45,13 +51,26 @@ public class SmokersSim extends JPanel implements SimPanel {
     public void startWith(SyncMethod method) {
         stopSimulation();
         resetState();
-        methodTitle = (method == SyncMethod.MUTEX ? "Mutex" : "Semáforos");
+
+        // --- Lógica de Título Actualizada ---
+        if (method == SyncMethod.MUTEX) {
+            methodTitle = "Mutex (Espera Activa)";
+        } else if (method == SyncMethod.SEMAPHORES) {
+            methodTitle = "Semáforos (Agente)";
+        } else if (method == SyncMethod.VAR_COND) {
+            methodTitle = "Variable Condición";
+        }
+
         running.set(true);
 
+        // --- Lógica de Estrategia Actualizada ---
         if (method == SyncMethod.MUTEX) {
             currentStrategy = new SmokersPureMutexStrategy(this);
-        } else {
+        } else if (method == SyncMethod.SEMAPHORES) {
             currentStrategy = new SmokersSemaphoreStrategy(this);
+        } else if (method == SyncMethod.VAR_COND) {
+            // --- ESTA ES LA LÍNEA NUEVA ---
+            currentStrategy = new SmokersConditionStrategy(this);
         }
 
         currentStrategy.start();
@@ -71,7 +90,7 @@ public class SmokersSim extends JPanel implements SimPanel {
     public JComponent getComponent() {
         return this;
     }
-    
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -112,12 +131,18 @@ public class SmokersSim extends JPanel implements SimPanel {
             g2.setColor(Color.BLACK);
             g2.draw(new Ellipse2D.Double(px - plateR, py - plateR, plateR * 2, plateR * 2));
             Color base = switch (i) {
-                case 0 -> new Color(180, 210, 255);
-                case 1 -> new Color(255, 220, 150);
-                default -> new Color(190, 255, 190);
+                case 0 ->
+                    new Color(180, 210, 255);
+                case 1 ->
+                    new Color(255, 220, 150);
+                default ->
+                    new Color(190, 255, 190);
             };
-            if (sstate[i] == SState.FUMANDO) base = new Color(80, 200, 120);
-            else if (sstate[i] == SState.ARMANDO) base = new Color(255, 200, 80);
+            if (sstate[i] == SState.FUMANDO) {
+                base = new Color(80, 200, 120);
+            } else if (sstate[i] == SState.ARMANDO) {
+                base = new Color(255, 200, 80);
+            }
             g2.setColor(base);
             g2.fill(new Ellipse2D.Double(px - 22, py - 22, 44, 44));
             g2.setColor(Color.BLACK);
@@ -125,9 +150,12 @@ public class SmokersSim extends JPanel implements SimPanel {
             g2.setFont(getFont().deriveFont(Font.BOLD, 15f));
             drawCentered(g2, "F" + i, px, py - plateR - 10);
             drawIngredient(g2, switch (i) {
-                case 0 -> Ing.TABACO;
-                case 1 -> Ing.PAPEL;
-                default -> Ing.CERILLOS;
+                case 0 ->
+                    Ing.TABACO;
+                case 1 ->
+                    Ing.PAPEL;
+                default ->
+                    Ing.CERILLOS;
             }, px - 8, py - 8);
             if (sstate[i] == SState.FUMANDO) {
                 g2.setColor(new Color(200, 200, 200, 180));
@@ -142,7 +170,7 @@ public class SmokersSim extends JPanel implements SimPanel {
 
     private void drawCentered(Graphics2D g2, String s, int x, int y) {
         FontMetrics fm = g2.getFontMetrics();
-        g2.drawString(s, x - fm.stringWidth(s) / 2, y + fm.getAscent()/2);
+        g2.drawString(s, x - fm.stringWidth(s) / 2, y + fm.getAscent() / 2);
     }
 
     private void drawIngredient(Graphics2D g2, Ing ing, int x, int y) {
