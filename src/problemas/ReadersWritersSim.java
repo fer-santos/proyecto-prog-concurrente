@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.Timer;
+import synch.ReadersWritersBarrierStrategy;
 import synch.ReadersWritersConditionStrategy;
 import synch.ReadersWritersMonitorStrategy;
 import synch.ReadersWritersMutexStrategy;     // <-- AÑADIDO: Para poder usar la estrategia Mutex
@@ -84,15 +85,17 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
             methodTitle = "Semáforos (Pref. Lectores)";
         } else if (method == SyncMethod.VAR_COND) {
             methodTitle = "Variable Condición";
-        } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
-            methodTitle = "Monitores";             // <-- NUEVO TÍTULO
+        } else if (method == SyncMethod.MONITORS) {
+            methodTitle = "Monitores";
+        } else if (method == SyncMethod.BARRIERS) { // <-- NUEVO ELSE IF
+            methodTitle = "Barreras";   // <-- NUEVO TÍTULO
         }
 
         running.set(true);
 
         // --- Lógica de Estrategia Actualizada ---
-        // Asegúrate de que los tipos de estrategia sean correctos
-        SynchronizationStrategy tempStrategy = null; // Variable temporal
+        // Variable temporal
+        SynchronizationStrategy tempStrategy = null;
 
         if (method == SyncMethod.MUTEX) {
             tempStrategy = new ReadersWritersMutexStrategy(this);
@@ -100,19 +103,34 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
             tempStrategy = new ReadersWritersSemaphoreStrategy(this);
         } else if (method == SyncMethod.VAR_COND) {
             tempStrategy = new ReadersWritersConditionStrategy(this);
-        } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
-            // --- ESTA ES LA LÍNEA NUEVA ---
+        } else if (method == SyncMethod.MONITORS) {
             tempStrategy = new ReadersWritersMonitorStrategy(this);
+        } else if (method == SyncMethod.BARRIERS) { // <-- NUEVO ELSE IF
+            // --- ESTA ES LA LÍNEA NUEVA ---
+            tempStrategy = new ReadersWritersBarrierStrategy(this);
         }
 
         currentStrategy = tempStrategy; // Asigna a la variable de instancia
 
         // Asegurarse de que currentStrategy no sea null
         if (currentStrategy != null) {
-            currentStrategy.start();
-            timer.start();
+            // Necesitamos castear SI la estrategia requiere métodos específicos
+            // En este caso, ReadersWritersBarrierStrategy implementa ReadersWritersStrategy
+            if (currentStrategy instanceof ReadersWritersStrategy) {
+                // El método requestAccess será llamado por stepAndRepaint,
+                // así que aquí solo iniciamos la estrategia general.
+                currentStrategy.start();
+                timer.start();
+            } else {
+                System.err.println("La estrategia seleccionada no es del tipo esperado ReadersWritersStrategy");
+                methodTitle = "ERROR DE TIPO";
+                repaint();
+            }
+
         } else {
             System.err.println("Método de sincronización no implementado para este problema: " + method);
+            methodTitle = "NO IMPLEMENTADO";
+            repaint();
         }
     }
 
