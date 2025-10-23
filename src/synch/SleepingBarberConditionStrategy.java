@@ -8,14 +8,17 @@ import problemas.SleepingBarberSim;
 import problemas.SleepingBarberSim.Customer;
 import problemas.SleepingBarberSim.CustState;
 
-public class SleepingBarberMutexStrategy implements SynchronizationStrategy {
+// NOTA: Esta es la implementación del patrón MONITOR (Mutex + Condition)
+public class SleepingBarberConditionStrategy implements SynchronizationStrategy {
 
     private final SleepingBarberSim panel;
     private Thread generator, barberLoop;
+    
+    // El "Monitor"
     private ReentrantLock mutex;
-    private Condition seatsChanged;
+    private Condition seatsChanged; // Condición para despertar al barbero
 
-    public SleepingBarberMutexStrategy(SleepingBarberSim panel) {
+    public SleepingBarberConditionStrategy(SleepingBarberSim panel) {
         this.panel = panel;
     }
 
@@ -24,6 +27,7 @@ public class SleepingBarberMutexStrategy implements SynchronizationStrategy {
         mutex = new ReentrantLock(true);
         seatsChanged = mutex.newCondition();
 
+        // --- Hilo Generador ---
         generator = new Thread(() -> {
             while (panel.running.get()) {
                 try {
@@ -31,55 +35,60 @@ public class SleepingBarberMutexStrategy implements SynchronizationStrategy {
                     mutex.lock();
                     try {
                         int idx = nextFreeSeat();
-                        if (idx >= 0) {
+                        if (idx >= 0) { // Si hay silla
                             panel.seats[idx] = c;
                             c.seatIndex = idx;
                             setTarget(c, panel.seatPos(idx).x, panel.seatPos(idx).y);
                             c.state = CustState.WAITING;
-                            seatsChanged.signalAll();
-                        } else {
+                            seatsChanged.signalAll(); // Avisa al barbero
+                        } else { // Si no hay silla
                             c.state = CustState.LEAVING;
                             setTarget(c, panel.getWidth() + 60, c.y);
                         }
                     } finally {
                         mutex.unlock();
                     }
-                    sleepRand(800, 1800);
+                    sleepRand(800, 1800); // Espera antes de generar el próximo
                 } catch (InterruptedException e) {
-                    // Cuando se interrumpe, se sale del bucle para terminar el hilo.
-                    return;
+                    return; // Termina si es interrumpido
                 }
             }
-        }, "GeneratorMutex");
+        }, "Generator-Cond"); // Nombre cambiado
 
+        // --- Hilo del Barbero ---
         barberLoop = new Thread(() -> {
             while (panel.running.get()) {
+                Customer customerToCut = null;
                 try {
                     mutex.lock();
                     try {
                         int idx = nextOccupiedSeat();
-                        while (idx < 0) {
+                        // Mientras NO haya clientes, el barbero duerme
+                        while (idx < 0) { 
                             panel.barberState = SleepingBarberSim.BarberState.SLEEPING;
-                            seatsChanged.await();
-                            idx = nextOccupiedSeat();
+                            seatsChanged.await(); // Se duerme y libera el lock
+                            idx = nextOccupiedSeat(); // Al despertar, vuelve a checar
                         }
-
+                        
+                        // Si llega aquí, hay un cliente
                         panel.barberState = SleepingBarberSim.BarberState.CUTTING;
-                        Customer c = panel.seats[idx];
-                        panel.seats[idx] = null;
-
-                        panel.inChair = c;
-                        moveCustomerToChair(c);
+                        customerToCut = panel.seats[idx];
+                        panel.seats[idx] = null; // Libera la silla
+                        
+                        panel.inChair = customerToCut;
+                        moveCustomerToChair(customerToCut); // Lo mueve visualmente
 
                     } finally {
                         mutex.unlock();
                     }
 
-                    sleepRand(1200, 2000);
+                    // --- Cortar Pelo (FUERA DEL LOCK) ---
+                    sleepRand(1200, 2000); // Simula el corte
 
+                    // --- Terminar con el cliente (Requiere lock brevemente) ---
                     mutex.lock();
                     try {
-                        if (panel.inChair != null) {
+                        if (panel.inChair == customerToCut) { // Asegura que sea el mismo cliente
                             panel.inChair.state = CustState.LEAVING;
                             setTarget(panel.inChair, panel.getWidth() + 60, panel.inChair.y);
                             panel.inChair = null;
@@ -87,13 +96,12 @@ public class SleepingBarberMutexStrategy implements SynchronizationStrategy {
                     } finally {
                         mutex.unlock();
                     }
-
+                    
                 } catch (InterruptedException e) {
-                    // Cuando se interrumpe, se sale del bucle para terminar el hilo.
-                    return;
+                    return; // Termina si es interrumpido
                 }
             }
-        }, "BarberMutex");
+        }, "Barber-Cond"); // Nombre cambiado
 
         generator.setDaemon(true);
         barberLoop.setDaemon(true);
@@ -103,15 +111,11 @@ public class SleepingBarberMutexStrategy implements SynchronizationStrategy {
 
     @Override
     public void stop() {
-        if (generator != null) {
-            generator.interrupt();
-        }
-        if (barberLoop != null) {
-            barberLoop.interrupt();
-        }
+        if (generator != null) generator.interrupt();
+        if (barberLoop != null) barberLoop.interrupt();
     }
 
-    // --- MÉTODOS AUXILIARES (sin cambios) ---
+    // --- MÉTODOS AUXILIARES (iguales que antes) ---
     private Customer spawnCustomer() {
         Customer c = new Customer();
         c.x = -40;
@@ -131,18 +135,14 @@ public class SleepingBarberMutexStrategy implements SynchronizationStrategy {
 
     private int nextFreeSeat() {
         for (int i = 0; i < panel.seats.length; i++) {
-            if (panel.seats[i] == null) {
-                return i;
-            }
+            if (panel.seats[i] == null) return i;
         }
         return -1;
     }
 
     private int nextOccupiedSeat() {
         for (int i = 0; i < panel.seats.length; i++) {
-            if (panel.seats[i] != null) {
-                return i;
-            }
+            if (panel.seats[i] != null) return i;
         }
         return -1;
     }
@@ -156,17 +156,7 @@ public class SleepingBarberMutexStrategy implements SynchronizationStrategy {
         return (int) (Math.random() * n);
     }
 
-//    private void sleepRand(int a, int b) {
-//        try {
-//            Thread.sleep(a + rnd(b - a));
-//        } catch (InterruptedException e) {
-//            Thread.currentThread().interrupt();
-//        }
-//    }
-
     private void sleepRand(int a, int b) throws InterruptedException {
         Thread.sleep(a + rnd(b - a));
     }
-
-    // (Pega aquí los métodos auxiliares de la versión anterior para completar la clase)
 }

@@ -15,10 +15,16 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
     public static final int MAX_WAIT_CHAIRS = 5;
     private static final int CUSTOMER_SIZE = 34;
 
-    public enum BarberState { SLEEPING, CUTTING }
-    public enum CustState { ENTERING, WAITING, TO_CHAIR, CUTTING, LEAVING, DONE }
+    public enum BarberState {
+        SLEEPING, CUTTING
+    }
+
+    public enum CustState {
+        ENTERING, WAITING, TO_CHAIR, CUTTING, LEAVING, DONE
+    }
 
     public static class Customer {
+
         public double x, y, tx, ty;
         public CustState state;
         public int seatIndex = -1;
@@ -60,13 +66,26 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
     public void startWith(SyncMethod method) {
         stopSimulation();
         resetState();
-        methodTitle = (method == SyncMethod.MUTEX ? "Mutex" : "Semáforos");
+
+        // --- Lógica de Título Actualizada ---
+        if (method == SyncMethod.MUTEX) {
+            methodTitle = "Mutex (Espera Activa)";
+        } else if (method == SyncMethod.SEMAPHORES) {
+            methodTitle = "Semáforos";
+        } else if (method == SyncMethod.VAR_COND) {
+            methodTitle = "Variable Condición";
+        }
+
         running.set(true);
 
+        // --- Lógica de Estrategia Actualizada ---
         if (method == SyncMethod.MUTEX) {
             currentStrategy = new SleepingBarberPureMutexStrategy(this);
-        } else {
+        } else if (method == SyncMethod.SEMAPHORES) {
             currentStrategy = new SleepingBarberSemaphoreStrategy(this);
+        } else if (method == SyncMethod.VAR_COND) {
+            // --- ESTA ES LA LÍNEA NUEVA ---
+            currentStrategy = new SleepingBarberConditionStrategy(this);
         }
 
         currentStrategy.start();
@@ -106,7 +125,7 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
         }
         repaint();
     }
-    
+
     public Point seatPos(int idx) {
         int w = getWidth(), h = getHeight();
         return new Point((int) (w * 0.18) + idx * 44, (int) (h * 0.22));
@@ -140,18 +159,18 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
             drawChair(g2, seatPos(i).x, seatPos(i).y - 18, 28, 26, seats[i] != null);
         }
         drawBarberChair(g2, chairPos().x, chairPos().y);
-        
+
         synchronized (customers) {
             for (Customer c : customers) {
                 drawCustomer(g2, c);
             }
         }
-        
+
         if (barberState == BarberState.SLEEPING) {
             g2.setFont(new Font("SansSerif", Font.BOLD, 14));
             g2.drawString("Zzz...", chairPos().x + 35, chairPos().y - 15);
         }
-        
+
         g2.dispose();
     }
 
