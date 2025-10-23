@@ -13,7 +13,9 @@ public class PhilosophersSim extends JPanel implements SimPanel {
 
     public static final int N = 5;
 
-    public enum State { THINKING, HUNGRY, EATING }
+    public enum State {
+        THINKING, HUNGRY, EATING
+    }
 
     public final AtomicBoolean running = new AtomicBoolean(false);
     public final State[] state = new State[N];
@@ -47,13 +49,26 @@ public class PhilosophersSim extends JPanel implements SimPanel {
     public void startWith(SyncMethod method) {
         stopSimulation();
         resetState();
-        methodTitle = (method == SyncMethod.MUTEX ? "Mutex" : "Semáforos");
+
+        // --- Lógica de Título Actualizada ---
+        if (method == SyncMethod.MUTEX) {
+            methodTitle = "Mutex (1 a la vez)";
+        } else if (method == SyncMethod.SEMAPHORES) {
+            methodTitle = "Semáforos (Camarero)";
+        } else if (method == SyncMethod.VAR_COND) {
+            methodTitle = "Variable Condición";
+        }
+
         running.set(true);
 
+        // --- Lógica de Estrategia Actualizada ---
         if (method == SyncMethod.MUTEX) {
             currentStrategy = new PhilosophersMutexStrategy(this);
-        } else {
+        } else if (method == SyncMethod.SEMAPHORES) {
             currentStrategy = new PhilosophersSemaphoreStrategy(this);
+        } else if (method == SyncMethod.VAR_COND) {
+            // --- ESTA ES LA LÍNEA NUEVA ---
+            currentStrategy = new PhilosophersConditionStrategy(this);
         }
 
         currentStrategy.start();
@@ -115,9 +130,12 @@ public class PhilosophersSim extends JPanel implements SimPanel {
             int tw = g2.getFontMetrics().stringWidth(label);
             g2.drawString(label, px - tw / 2, py - plateR - 8);
             switch (state[i]) {
-                case THINKING -> g2.setColor(new Color(120, 180, 255, 70));
-                case HUNGRY -> g2.setColor(new Color(255, 165, 0, 70));
-                case EATING -> g2.setColor(new Color(0, 200, 120, 90));
+                case THINKING ->
+                    g2.setColor(new Color(120, 180, 255, 70));
+                case HUNGRY ->
+                    g2.setColor(new Color(255, 165, 0, 70));
+                case EATING ->
+                    g2.setColor(new Color(0, 200, 120, 90));
             }
             g2.fill(new Ellipse2D.Double(px - dishR, py - dishR, dishR * 2, dishR * 2));
         }
