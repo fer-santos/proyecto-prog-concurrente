@@ -62,35 +62,44 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
         barberState = BarberState.SLEEPING;
     }
 
-    @Override
-    public void startWith(SyncMethod method) {
-        stopSimulation();
-        resetState();
+@Override
+public void startWith(SyncMethod method) {
+    stopSimulation();
+    resetState();
 
-        // --- Lógica de Título Actualizada ---
-        if (method == SyncMethod.MUTEX) {
-            methodTitle = "Mutex (Espera Activa)";
-        } else if (method == SyncMethod.SEMAPHORES) {
-            methodTitle = "Semáforos";
-        } else if (method == SyncMethod.VAR_COND) {
-            methodTitle = "Variable Condición";
-        }
+    // --- Lógica de Título Actualizada ---
+    if(method == SyncMethod.MUTEX) {
+        methodTitle = "Mutex (Espera Activa)";
+    } else if (method == SyncMethod.SEMAPHORES) {
+        methodTitle = "Semáforos";
+    } else if (method == SyncMethod.VAR_COND) {
+        methodTitle = "Variable Condición";
+    } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
+        methodTitle = "Monitores";             // <-- NUEVO TÍTULO
+    }
 
-        running.set(true);
+    running.set(true);
 
-        // --- Lógica de Estrategia Actualizada ---
-        if (method == SyncMethod.MUTEX) {
-            currentStrategy = new SleepingBarberPureMutexStrategy(this);
-        } else if (method == SyncMethod.SEMAPHORES) {
-            currentStrategy = new SleepingBarberSemaphoreStrategy(this);
-        } else if (method == SyncMethod.VAR_COND) {
-            // --- ESTA ES LA LÍNEA NUEVA ---
-            currentStrategy = new SleepingBarberConditionStrategy(this);
-        }
+    // --- Lógica de Estrategia Actualizada ---
+    if (method == SyncMethod.MUTEX) {
+        currentStrategy = new SleepingBarberPureMutexStrategy(this);
+    } else if (method == SyncMethod.SEMAPHORES) {
+        currentStrategy = new SleepingBarberSemaphoreStrategy(this);
+    } else if (method == SyncMethod.VAR_COND) {
+        currentStrategy = new SleepingBarberConditionStrategy(this);
+    } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
+        // --- ESTA ES LA LÍNEA NUEVA ---
+        currentStrategy = new SleepingBarberMonitorStrategy(this);
+    }
 
+    // Asegurarse de que currentStrategy no sea null
+    if (currentStrategy != null) {
         currentStrategy.start();
         repaintTimer.start();
+    } else {
+        System.err.println("Método de sincronización no implementado para este problema: " + method);
     }
+}
 
     @Override
     public void stopSimulation() {
