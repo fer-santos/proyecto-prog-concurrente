@@ -18,6 +18,7 @@ import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 import synch.ReadersWritersConditionStrategy;
+import synch.ReadersWritersMonitorStrategy;
 import synch.ReadersWritersMutexStrategy;     // <-- AÑADIDO: Para poder usar la estrategia Mutex
 import synch.ReadersWritersSemaphoreStrategy; // <-- AÑADIDO: Para poder usar la estrategia Semáforo
 import synch.ReadersWritersStrategy;          // <-- AÑADIDO: Para poder hacer el 'cast'
@@ -25,10 +26,17 @@ import synch.SynchronizationStrategy;         // <-- AÑADIDO: Para la variable 
 // ========================================================
 
 public class ReadersWritersSim extends JPanel implements SimPanel {
-    public enum Role { READER, WRITER }
-    public enum AState { ARRIVING, WAITING, READING, WRITING, LEAVING, DONE }
+
+    public enum Role {
+        READER, WRITER
+    }
+
+    public enum AState {
+        ARRIVING, WAITING, READING, WRITING, LEAVING, DONE
+    }
 
     public static class Actor {
+
         public Role role;
         public AState state = AState.ARRIVING;
         public double x, y, tx, ty;
@@ -41,15 +49,15 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
     public volatile int readersWaiting = 0;
     public volatile int writersWaiting = 0;
     public final List<Actor> actors = Collections.synchronizedList(new ArrayList<>());
-    
+
     private final Timer timer = new Timer(30, e -> stepAndRepaint());
     private String methodTitle = "";
     private SynchronizationStrategy currentStrategy;
-    
+
     public ReadersWritersSim() {
         setBackground(new Color(238, 238, 238));
     }
-    
+
     private void resetState() {
         actors.clear();
         readersActive = readersWaiting = writersWaiting = 0;
@@ -64,39 +72,49 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
         repaint();
     }
 
-@Override
-public void startWith(SyncMethod method) {
-    stopSimulation();
-    resetState();
-    
-    // --- Lógica de Título Actualizada ---
-    if(method == SyncMethod.MUTEX) {
-        methodTitle = "Mutex (Solo 1 a la vez)"; // Título más descriptivo
-    } else if (method == SyncMethod.SEMAPHORES) {
-        methodTitle = "Semáforos (Pref. Lectores)"; // Título más descriptivo
-    } else if (method == SyncMethod.VAR_COND) {
-        methodTitle = "Variable Condición";
-    }
-    
-    running.set(true);
+    @Override
+    public void startWith(SyncMethod method) {
+        stopSimulation();
+        resetState();
 
-    // --- Lógica de Estrategia Actualizada ---
-    if (method == SyncMethod.MUTEX) {
-        currentStrategy = new ReadersWritersMutexStrategy(this);
-    } else if (method == SyncMethod.SEMAPHORES) {
-        currentStrategy = new ReadersWritersSemaphoreStrategy(this);
-    } else if (method == SyncMethod.VAR_COND) {
-        // --- ESTA ES LA LÍNEA NUEVA ---
-        currentStrategy = new ReadersWritersConditionStrategy(this);
+        // --- Lógica de Título Actualizada ---
+        if (method == SyncMethod.MUTEX) {
+            methodTitle = "Mutex (Solo 1 a la vez)";
+        } else if (method == SyncMethod.SEMAPHORES) {
+            methodTitle = "Semáforos (Pref. Lectores)";
+        } else if (method == SyncMethod.VAR_COND) {
+            methodTitle = "Variable Condición";
+        } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
+            methodTitle = "Monitores";             // <-- NUEVO TÍTULO
+        }
+
+        running.set(true);
+
+        // --- Lógica de Estrategia Actualizada ---
+        // Asegúrate de que los tipos de estrategia sean correctos
+        SynchronizationStrategy tempStrategy = null; // Variable temporal
+
+        if (method == SyncMethod.MUTEX) {
+            tempStrategy = new ReadersWritersMutexStrategy(this);
+        } else if (method == SyncMethod.SEMAPHORES) {
+            tempStrategy = new ReadersWritersSemaphoreStrategy(this);
+        } else if (method == SyncMethod.VAR_COND) {
+            tempStrategy = new ReadersWritersConditionStrategy(this);
+        } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
+            // --- ESTA ES LA LÍNEA NUEVA ---
+            tempStrategy = new ReadersWritersMonitorStrategy(this);
+        }
+
+        currentStrategy = tempStrategy; // Asigna a la variable de instancia
+
+        // Asegurarse de que currentStrategy no sea null
+        if (currentStrategy != null) {
+            currentStrategy.start();
+            timer.start();
+        } else {
+            System.err.println("Método de sincronización no implementado para este problema: " + method);
+        }
     }
-    
-    // Asegúrate de que currentStrategy sea del tipo correcto si necesitas
-    // llamar a métodos específicos como requestAccess.
-    // El cast ya estaba en tu código original, así que debería estar bien.
-    
-    currentStrategy.start();
-    timer.start(); // Asegúrate de iniciar el timer
-}
 
     @Override
     public void stopSimulation() {
@@ -129,7 +147,7 @@ public void startWith(SyncMethod method) {
                 } else if (a.state == AState.ARRIVING) {
                     a.state = AState.WAITING;
                     // ESTE CAST AHORA FUNCIONARÁ GRACIAS A LOS IMPORTS
-                    ((ReadersWritersStrategy)currentStrategy).requestAccess(a);
+                    ((ReadersWritersStrategy) currentStrategy).requestAccess(a);
                 } else if (a.state == AState.LEAVING && d < 2) {
                     a.state = AState.DONE;
                     toRemove.add(a);
@@ -160,14 +178,14 @@ public void startWith(SyncMethod method) {
         g2.setFont(getFont().deriveFont(Font.BOLD, 16f));
         String title = writerActive ? "(ESCRIBIENDO)" : (readersActive > 0 ? "(LEYENDO)" : "(Libre)");
         drawCentered(g2, title, docCenter().x, doc.y - 12);
-        
+
         g2.setFont(getFont().deriveFont(Font.PLAIN, 13f));
         g2.setColor(new Color(70, 70, 70));
         g2.drawString("Leyendo: " + readersActive, 20, h - 54);
         g2.drawString("Escritor activo: " + (writerActive ? "Sí" : "No"), 20, h - 36);
         g2.drawString("Lectores en espera: " + readersWaiting, w - 220, h - 54);
         g2.drawString("Escritores en espera: " + writersWaiting, w - 220, h - 36);
-        
+
         synchronized (actors) {
             for (Actor a : actors) {
                 drawActor(g2, a);
@@ -186,7 +204,7 @@ public void startWith(SyncMethod method) {
         g2.setColor(Color.WHITE);
         drawCentered(g2, a.role == Role.READER ? "L" : "E", (int) a.x, (int) a.y);
     }
-    
+
     private void drawCentered(Graphics2D g2, String s, int x, int y) {
         FontMetrics fm = g2.getFontMetrics();
         g2.drawString(s, x - fm.stringWidth(s) / 2, y + fm.getAscent() / 2 - 2);
