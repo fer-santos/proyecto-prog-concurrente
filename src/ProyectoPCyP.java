@@ -1,3 +1,4 @@
+
 import problemas.SimPanel;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -117,7 +118,7 @@ public class ProyectoPCyP extends JFrame {
         semaforos.addActionListener(e -> selectMethod(SyncMethod.SEMAPHORES));
         varCon.addActionListener(e -> selectMethod(SyncMethod.VAR_COND));
         monitores.addActionListener(e -> selectMethod(SyncMethod.MONITORS)); // <-- LÍNEA MODIFICADA
-        barreras.addActionListener(e -> methodNotImplementedYet("Barreras"));
+        barreras.addActionListener(e -> selectMethod(SyncMethod.BARRIERS)); // <-- LÍNEA MODIFICADA
     }
 
     private void methodNotImplementedYet(String name) {

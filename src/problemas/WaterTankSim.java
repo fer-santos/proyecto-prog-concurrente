@@ -42,31 +42,41 @@ public class WaterTankSim extends JPanel implements SimPanel {
             methodTitle = "Semáforos";
         } else if (method == SyncMethod.VAR_COND) {
             methodTitle = "Variable Condición";
-        } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
-            methodTitle = "Monitores";             // <-- NUEVO TÍTULO
+        } else if (method == SyncMethod.MONITORS) {
+            methodTitle = "Monitores";
+        } else if (method == SyncMethod.BARRIERS) { // <-- NUEVO ELSE IF
+            methodTitle = "Barreras";              // <-- NUEVO TÍTULO
         }
 
         running.set(true);
 
         // --- Lógica de Estrategia Actualizada ---
+        // Variable temporal para asegurar asignación
+        SynchronizationStrategy tempStrategy = null;
+
         if (method == SyncMethod.MUTEX) {
-            currentStrategy = new WaterTankPureMutexStrategy(this);
+            tempStrategy = new WaterTankPureMutexStrategy(this);
         } else if (method == SyncMethod.SEMAPHORES) {
-            currentStrategy = new WaterTankSemaphoreStrategy(this);
+            tempStrategy = new WaterTankSemaphoreStrategy(this);
         } else if (method == SyncMethod.VAR_COND) {
-            currentStrategy = new WaterTankConditionStrategy(this);
-        } else if (method == SyncMethod.MONITORS) { // <-- NUEVO ELSE IF
+            tempStrategy = new WaterTankConditionStrategy(this);
+        } else if (method == SyncMethod.MONITORS) {
+            tempStrategy = new WaterTankMonitorStrategy(this);
+        } else if (method == SyncMethod.BARRIERS) { // <-- NUEVO ELSE IF
             // --- ESTA ES LA LÍNEA NUEVA ---
-            currentStrategy = new WaterTankMonitorStrategy(this);
+            tempStrategy = new WaterTankBarrierStrategy(this);
         }
 
-        // Asegurarse de que currentStrategy no sea null si se añade un nuevo método no implementado
+        currentStrategy = tempStrategy; // Asigna a la variable de instancia
+
+        // Asegurarse de que currentStrategy no sea null
         if (currentStrategy != null) {
             currentStrategy.start();
             repaintTimer.start();
         } else {
-            // Opcional: Mostrar un mensaje si el método no está mapeado
             System.err.println("Método de sincronización no implementado para este problema: " + method);
+            methodTitle = "NO IMPLEMENTADO"; // Poner un título claro en la UI
+            repaint(); // Redibujar para mostrar el título
         }
     }
 
