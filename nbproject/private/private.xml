@@ -3,9 +3,8 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/home/fernando-gordillo/NetBeansProjects/ProyectoPCyP/src/ProyectoPCyP.java</file>
-            <file>file:/home/fernando-gordillo/NetBeansProjects/ProyectoPCyP/src/synch/ReadersWritersMonitorStrategy.java</file>
-            <file>file:/home/fernando-gordillo/NetBeansProjects/ProyectoPCyP/src/problemas/ReadersWritersSim.java</file>
+            <file>file:/home/fernando-gordillo/NetBeansProjects/ProyectoPCyP/src/core/ProyectoPCyP.java</file>
+            <file>file:/home/fernando-gordillo/NetBeansProjects/ProyectoPCyP/src/problemas/SimPanel.java</file>
         </group>
     </open-files>
 </project-private>

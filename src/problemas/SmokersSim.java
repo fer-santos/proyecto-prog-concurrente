@@ -1,12 +1,12 @@
 package problemas;
 
-// import SimPanel;
-// import ProyectoPCyP.SyncMethod;
 import java.awt.*;
 import java.awt.geom.Ellipse2D;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.*;
 import synch.*;
+// --- IMPORTACIÓN CORRECTA ---
+import core.DrawingPanel;
 
 public class SmokersSim extends JPanel implements SimPanel {
 
@@ -19,7 +19,7 @@ public class SmokersSim extends JPanel implements SimPanel {
     }
 
     public final AtomicBoolean running = new AtomicBoolean(false);
-    public volatile Ing i1 = null, i2 = null;
+    public volatile Ing i1 = null, i2 = null; // Ingredientes en la mesa
     public volatile int activeSmoker = -1; // -1: nadie, 0: T, 1: P, 2: C
     public final SState[] sstate = {SState.ESPERANDO, SState.ESPERANDO, SState.ESPERANDO};
 
@@ -27,8 +27,18 @@ public class SmokersSim extends JPanel implements SimPanel {
     private String methodTitle = "";
     private SynchronizationStrategy currentStrategy;
 
+    // --- NUEVO CAMPO ---
+    private DrawingPanel drawingPanel = null;
+
+    // --- NUEVO MÉTODO IMPLEMENTADO ---
+    @Override
+    public void setDrawingPanel(DrawingPanel drawingPanel) {
+        this.drawingPanel = drawingPanel;
+    }
+
     public SmokersSim() {
         setBackground(new Color(238, 238, 238));
+        // No llames a resetState aquí, se hace en showSkeleton/startWith
     }
 
     private void resetState() {
@@ -39,18 +49,30 @@ public class SmokersSim extends JPanel implements SimPanel {
         }
     }
 
+    // --- MÉTODO MODIFICADO ---
     @Override
     public void showSkeleton() {
-        stopSimulation();
+        stopSimulation(); // Detiene hilos y limpia estrategia
         methodTitle = "";
-        resetState();
-        repaint();
+        resetState(); // Reinicia el estado lógico
+        clearRagGraph(); // Limpia el grafo asociado
+        repaint(); // Redibuja este panel (SmokersSim)
     }
 
+    // --- NUEVO MÉTODO AUXILIAR ---
+    private void clearRagGraph() {
+        if (drawingPanel != null) {
+            // Llamar desde el EDT para seguridad
+            SwingUtilities.invokeLater(() -> drawingPanel.clearGraph());
+        }
+    }
+
+    // --- MÉTODO MODIFICADO ---
     @Override
     public void startWith(SyncMethod method) {
-        stopSimulation();
-        resetState();
+        // stopSimulation() se llama implícitamente via showSkeleton desde selectProblem
+        clearRagGraph(); // Limpia grafo al inicio de seleccionar método
+        resetState();    // Reinicia estado lógico
 
         // --- Lógica de Título Actualizada ---
         if (method == SyncMethod.MUTEX) {
@@ -61,49 +83,111 @@ public class SmokersSim extends JPanel implements SimPanel {
             methodTitle = "Variable Condición";
         } else if (method == SyncMethod.MONITORS) {
             methodTitle = "Monitores";
-        } else if (method == SyncMethod.BARRIERS) { // <-- NUEVO ELSE IF
-            methodTitle = "Barreras";      // <-- NUEVO TÍTULO
+        } else if (method == SyncMethod.BARRIERS) {
+            methodTitle = "Barreras (Rondas)"; // Ajustado el título
+        } else {
+            methodTitle = "Desconocido";
         }
 
-        running.set(true);
+        // --- Configuración Inicial del Grafo RAG ---
+        if (drawingPanel != null) {
+            SwingUtilities.invokeLater(() -> {
+                if (method == SyncMethod.MUTEX) {
+                    // Llama a un método específico para fumadores (a crear en DrawingPanel)
+                    drawingPanel.setupSmokersGraph();
+                }
+                // Añadiremos setups para otros métodos después
+                // else if (method == SyncMethod.SEMAPHORES) { drawingPanel.setupSmokersSemaphoreGraph(); }
+                // ... etc ...
+                // else {
+                //    No es necesario limpiar aquí si ya se hizo antes
+                // }
+            });
+        }
+
+        running.set(true); // Marcar como corriendo ANTES de crear hilos
 
         // --- Lógica de Estrategia Actualizada ---
-        // Variable temporal
         SynchronizationStrategy tempStrategy = null;
-
         if (method == SyncMethod.MUTEX) {
-            tempStrategy = new SmokersPureMutexStrategy(this);
+            tempStrategy = new SmokersPureMutexStrategy(this); // Pasa 'this'
         } else if (method == SyncMethod.SEMAPHORES) {
-            tempStrategy = new SmokersSemaphoreStrategy(this);
+            tempStrategy = new SmokersSemaphoreStrategy(this); // Pasa 'this'
         } else if (method == SyncMethod.VAR_COND) {
-            tempStrategy = new SmokersConditionStrategy(this);
+            tempStrategy = new SmokersConditionStrategy(this); // Pasa 'this'
         } else if (method == SyncMethod.MONITORS) {
-            tempStrategy = new SmokersMonitorStrategy(this);
-        } else if (method == SyncMethod.BARRIERS) { // <-- NUEVO ELSE IF
-            // --- ESTA ES LA LÍNEA NUEVA ---
-            tempStrategy = new SmokersBarrierStrategy(this);
+            tempStrategy = new SmokersMonitorStrategy(this); // Pasa 'this'
+        } else if (method == SyncMethod.BARRIERS) {
+            tempStrategy = new SmokersBarrierStrategy(this); // Pasa 'this'
         }
 
         currentStrategy = tempStrategy; // Asigna a la variable de instancia
 
-        // Asegurarse de que currentStrategy no sea null
         if (currentStrategy != null) {
-            currentStrategy.start();
-            repaintTimer.start();
+            currentStrategy.start(); // Inicia los hilos de la estrategia
+            repaintTimer.start(); // Inicia el timer para este panel
         } else {
             System.err.println("Método de sincronización no implementado para este problema: " + method);
             methodTitle = "NO IMPLEMENTADO";
+            running.set(false);
             repaint();
+            // Limpia el grafo si no se encontró estrategia y no se hizo setup
+            if (drawingPanel != null && method != SyncMethod.MUTEX) {
+                clearRagGraph();
+            }
         }
     }
 
+    // --- NUEVOS MÉTODOS para ser llamados por la ESTRATEGIA (Mutex Puro) ---
+    // (Estos llamarán a métodos correspondientes en DrawingPanel, a crear después)
+    public void updateGraphAgentRequestingLock() {
+        if (drawingPanel != null && currentStrategy instanceof SmokersPureMutexStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentRequestingLock_Smokers());
+        }
+    }
+
+    public void updateGraphAgentHoldingLock(Ing ing1, Ing ing2) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersPureMutexStrategy) {
+            // Pasamos los ingredientes para mostrarlos si es necesario
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentHoldingLock_Smokers(ing1, ing2));
+        }
+    }
+
+    public void updateGraphAgentReleasingLock() {
+        if (drawingPanel != null && currentStrategy instanceof SmokersPureMutexStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentReleasingLock_Smokers());
+        }
+    }
+
+    public void updateGraphSmokerRequestingLock(int smokerId) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersPureMutexStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerRequestingLock_Smokers(smokerId));
+        }
+    }
+
+    public void updateGraphSmokerHoldingLock(int smokerId) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersPureMutexStrategy) {
+            // Indica que tomó ingredientes (mesa vacía)
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerHoldingLock_Smokers(smokerId));
+        }
+    }
+
+    public void updateGraphSmokerReleasingLock(int smokerId) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersPureMutexStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerReleasingLock_Smokers(smokerId));
+        }
+    }
+
+    // --- MÉTODO MODIFICADO ---
     @Override
     public void stopSimulation() {
         running.set(false);
         if (currentStrategy != null) {
             currentStrategy.stop();
+            currentStrategy = null; // Limpia referencia
         }
         repaintTimer.stop();
+        // No limpiar grafo aquí
     }
 
     @Override
@@ -111,6 +195,7 @@ public class SmokersSim extends JPanel implements SimPanel {
         return this;
     }
 
+    // --- paintComponent, drawCentered, drawIngredient SIN CAMBIOS ---
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -118,66 +203,101 @@ public class SmokersSim extends JPanel implements SimPanel {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         int w = getWidth(), h = getHeight();
         int cx = w / 2, cy = (int) (h * 0.52);
+
+        // Dibuja título
         if (!methodTitle.isEmpty()) {
             g2.setFont(getFont().deriveFont(Font.BOLD, 18f));
             String t = "Fumadores (" + methodTitle + ")";
-            g2.drawString(t, (w - g2.getFontMetrics().stringWidth(t)) / 2, (int) (h * 0.06));
+            int tw = g2.getFontMetrics().stringWidth(t);
+            g2.drawString(t, (w - tw) / 2, (int) (h * 0.06));
         }
+
+        // Dibuja mesa
         int tableR = Math.min(w, h) / 3;
         g2.setColor(new Color(245, 245, 245));
         g2.fill(new Ellipse2D.Double(cx - tableR, cy - tableR, tableR * 2, tableR * 2));
         g2.setColor(Color.DARK_GRAY);
         g2.setStroke(new BasicStroke(3f));
         g2.draw(new Ellipse2D.Double(cx - tableR, cy - tableR, tableR * 2, tableR * 2));
+
+        // Dibuja centro de la mesa (donde van ingredientes)
         g2.setColor(new Color(220, 220, 240));
         g2.fill(new Ellipse2D.Double(cx - 28, cy - 28, 56, 56));
         g2.setColor(Color.BLACK);
         g2.draw(new Ellipse2D.Double(cx - 28, cy - 28, 56, 56));
-        if (i1 != null && i2 != null) {
-            drawIngredient(g2, i1, cx - 30, cy - 6);
-            drawIngredient(g2, i2, cx + 16, cy - 6);
+
+        // Dibuja ingredientes (si los hay) - Lee variables volátiles una vez
+        Ing currentI1 = this.i1;
+        Ing currentI2 = this.i2;
+        if (currentI1 != null && currentI2 != null) {
+            drawIngredient(g2, currentI1, cx - 30, cy - 6);
+            drawIngredient(g2, currentI2, cx + 16, cy - 6);
         } else {
             g2.setColor(new Color(160, 160, 160));
             drawCentered(g2, "(Vacío)", cx, cy + 2);
         }
+
+        // Dibuja fumadores
         double angleStep = 2 * Math.PI / 3.0;
-        int plateR = (int) (tableR * 0.28);
+        int plateR = (int) (tableR * 0.28); // Radio del "plato" del fumador
         for (int i = 0; i < 3; i++) {
             double ang = -Math.PI / 2 + i * angleStep;
             int px = cx + (int) (Math.cos(ang) * (tableR - plateR - 12));
             int py = cy + (int) (Math.sin(ang) * (tableR - plateR - 12));
+
+            // Dibuja plato exterior
             g2.setColor(Color.WHITE);
             g2.fill(new Ellipse2D.Double(px - plateR, py - plateR, plateR * 2, plateR * 2));
             g2.setColor(Color.BLACK);
             g2.draw(new Ellipse2D.Double(px - plateR, py - plateR, plateR * 2, plateR * 2));
-            Color base = switch (i) {
-                case 0 ->
-                    new Color(180, 210, 255);
-                case 1 ->
-                    new Color(255, 220, 150);
-                default ->
-                    new Color(190, 255, 190);
-            };
-            if (sstate[i] == SState.FUMANDO) {
-                base = new Color(80, 200, 120);
-            } else if (sstate[i] == SState.ARMANDO) {
-                base = new Color(255, 200, 80);
+
+            // Determina color del círculo interior según estado
+            Color base;
+            SState currentState = this.sstate[i]; // Lee estado una vez
+            switch (currentState) {
+                case ARMANDO:
+                    base = new Color(255, 200, 80);
+                    break;
+                case FUMANDO:
+                    base = new Color(80, 200, 120);
+                    break;
+                case ESPERANDO:
+                default:
+                    switch (i) {
+                        case 0:
+                            base = new Color(180, 210, 255);
+                            break; // Fumador 0 (Tabaco)
+                        case 1:
+                            base = new Color(255, 220, 150);
+                            break; // Fumador 1 (Papel)
+                        default:
+                            base = new Color(190, 255, 190);
+                            break;// Fumador 2 (Cerillos)
+                    }
+                    break;
             }
             g2.setColor(base);
-            g2.fill(new Ellipse2D.Double(px - 22, py - 22, 44, 44));
+            g2.fill(new Ellipse2D.Double(px - 22, py - 22, 44, 44)); // Círculo interior
             g2.setColor(Color.BLACK);
             g2.draw(new Ellipse2D.Double(px - 22, py - 22, 44, 44));
+
+            // Etiqueta F0, F1, F2
             g2.setFont(getFont().deriveFont(Font.BOLD, 15f));
             drawCentered(g2, "F" + i, px, py - plateR - 10);
-            drawIngredient(g2, switch (i) {
+
+            // Ingrediente que posee el fumador
+            Ing ingredientOwned = switch (i) {
                 case 0 ->
                     Ing.TABACO;
                 case 1 ->
                     Ing.PAPEL;
                 default ->
                     Ing.CERILLOS;
-            }, px - 8, py - 8);
-            if (sstate[i] == SState.FUMANDO) {
+            };
+            drawIngredient(g2, ingredientOwned, px - 8, py - 8);
+
+            // Humo si está fumando
+            if (currentState == SState.FUMANDO) {
                 g2.setColor(new Color(200, 200, 200, 180));
                 int dx = (int) (Math.cos(ang) * 28), dy = (int) (Math.sin(ang) * 28);
                 g2.fillOval(px + dx, py + dy, 10, 10);
@@ -194,6 +314,9 @@ public class SmokersSim extends JPanel implements SimPanel {
     }
 
     private void drawIngredient(Graphics2D g2, Ing ing, int x, int y) {
+        if (ing == null) {
+            return; // Chequeo null
+        }
         switch (ing) {
             case TABACO -> {
                 g2.setColor(new Color(120, 70, 40));
@@ -217,4 +340,4 @@ public class SmokersSim extends JPanel implements SimPanel {
             }
         }
     }
-}
+} // Fin de la clase SmokersSim

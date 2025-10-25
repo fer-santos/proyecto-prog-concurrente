@@ -1,11 +1,11 @@
 package problemas;
 
-// import SimPanel;
-// import ProyectoPCyP.SyncMethod;
 import java.awt.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.*;
 import synch.*;
+// --- IMPORTACIÓN CORRECTA ---
+import core.DrawingPanel;
 
 public class WaterTankSim extends JPanel implements SimPanel {
 
@@ -17,23 +17,47 @@ public class WaterTankSim extends JPanel implements SimPanel {
     private String methodTitle = "";
     private SynchronizationStrategy currentStrategy;
 
+    // --- NUEVO CAMPO ---
+    private DrawingPanel drawingPanel = null;
+
+    // --- NUEVO MÉTODO IMPLEMENTADO ---
+    @Override
+    public void setDrawingPanel(DrawingPanel drawingPanel) {
+        this.drawingPanel = drawingPanel;
+    }
+
     public WaterTankSim() {
         setBackground(new Color(238, 238, 238));
         repaintTimer = new Timer(60, e -> repaint());
     }
 
+    // --- MÉTODO MODIFICADO ---
     @Override
     public void showSkeleton() {
-        stopSimulation();
+        stopSimulation(); // Detiene hilos y limpia estrategia
         level = 0;
         methodTitle = "";
-        repaint();
+        clearRagGraph(); // Limpia el grafo asociado
+        repaint(); // Redibuja este panel (WaterTankSim)
     }
 
-// ... dentro de WaterTankSim.java ...
+    // --- NUEVO MÉTODO AUXILIAR ---
+    private void clearRagGraph() {
+        if (drawingPanel != null) {
+            // Llamar desde el EDT para seguridad
+            SwingUtilities.invokeLater(() -> drawingPanel.clearGraph());
+        }
+    }
+
+    // --- MÉTODO MODIFICADO ---
     @Override
     public void startWith(SyncMethod method) {
-        stopSimulation();
+        // stopSimulation() ya no es necesario aquí si showSkeleton() lo hace
+        // y showSkeleton se llama desde selectProblem
+
+        // Limpia el grafo antes de configurar el nuevo estado
+        clearRagGraph();
+        level = 0; // Reinicia nivel
 
         // --- Lógica de Título Actualizada ---
         if (method == SyncMethod.MUTEX) {
@@ -44,49 +68,122 @@ public class WaterTankSim extends JPanel implements SimPanel {
             methodTitle = "Variable Condición";
         } else if (method == SyncMethod.MONITORS) {
             methodTitle = "Monitores";
-        } else if (method == SyncMethod.BARRIERS) { // <-- NUEVO ELSE IF
-            methodTitle = "Barreras";              // <-- NUEVO TÍTULO
+        } else if (method == SyncMethod.BARRIERS) {
+            methodTitle = "Barreras";
+        } else {
+            methodTitle = "Desconocido";
         }
 
-        running.set(true);
+        // --- Configuración Inicial del Grafo RAG ---
+        if (drawingPanel != null) {
+            // Llama al setup ANTES de iniciar la estrategia
+            // Usamos invokeLater para asegurar que ocurra en el EDT
+            SwingUtilities.invokeLater(() -> {
+                if (method == SyncMethod.MUTEX) {
+                    drawingPanel.setupProducerConsumerGraph(); // Configura para Mutex
+                } // Agregaremos setups para otros métodos después
+                // else if (method == SyncMethod.SEMAPHORES) { ... }
+                // else if (method == SyncMethod.VAR_COND) { drawingPanel.setupProducerConsumerGraph(); } // Podría usar el mismo
+                // else if (method == SyncMethod.MONITORS) { drawingPanel.setupProducerConsumerGraph(); } // Podría usar el mismo
+                // else if (method == SyncMethod.BARRIERS) { drawingPanel.setupProducerConsumerGraph(); } // Podría usar el mismo
+                else {
+                    // No hace falta clearGraph aquí si ya se llamó antes de entrar a startWith
+                    // drawingPanel.clearGraph(); 
+                }
+            });
+        }
+
+        running.set(true); // Marcar como corriendo ANTES de crear hilos
 
         // --- Lógica de Estrategia Actualizada ---
-        // Variable temporal para asegurar asignación
         SynchronizationStrategy tempStrategy = null;
-
         if (method == SyncMethod.MUTEX) {
-            tempStrategy = new WaterTankPureMutexStrategy(this);
+            tempStrategy = new WaterTankPureMutexStrategy(this); // Pasa 'this'
         } else if (method == SyncMethod.SEMAPHORES) {
-            tempStrategy = new WaterTankSemaphoreStrategy(this);
+            tempStrategy = new WaterTankSemaphoreStrategy(this); // Pasa 'this'
         } else if (method == SyncMethod.VAR_COND) {
-            tempStrategy = new WaterTankConditionStrategy(this);
+            tempStrategy = new WaterTankConditionStrategy(this); // Pasa 'this'
         } else if (method == SyncMethod.MONITORS) {
-            tempStrategy = new WaterTankMonitorStrategy(this);
-        } else if (method == SyncMethod.BARRIERS) { // <-- NUEVO ELSE IF
-            // --- ESTA ES LA LÍNEA NUEVA ---
-            tempStrategy = new WaterTankBarrierStrategy(this);
+            tempStrategy = new WaterTankMonitorStrategy(this); // Pasa 'this'
+        } else if (method == SyncMethod.BARRIERS) {
+            tempStrategy = new WaterTankBarrierStrategy(this); // Pasa 'this'
         }
 
-        currentStrategy = tempStrategy; // Asigna a la variable de instancia
+        currentStrategy = tempStrategy; // Asigna a la variable de instancia (importante)
 
-        // Asegurarse de que currentStrategy no sea null
         if (currentStrategy != null) {
-            currentStrategy.start();
-            repaintTimer.start();
+            currentStrategy.start(); // Inicia los hilos de la estrategia
+            repaintTimer.start(); // Inicia el timer para este panel (WaterTankSim)
         } else {
             System.err.println("Método de sincronización no implementado para este problema: " + method);
-            methodTitle = "NO IMPLEMENTADO"; // Poner un título claro en la UI
-            repaint(); // Redibujar para mostrar el título
+            methodTitle = "NO IMPLEMENTADO";
+            running.set(false); // Asegura que no quede corriendo
+            repaint();
+            // Limpia el grafo si no se encontró estrategia
+            clearRagGraph();
         }
     }
 
+    // --- NUEVOS MÉTODOS para ser llamados por la ESTRATEGIA ---
+    public void updateGraphProducerRequestingMutex() {
+        // Solo actualiza si el panel existe y la estrategia actual es la correcta
+        if (drawingPanel != null && currentStrategy instanceof WaterTankPureMutexStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerRequestingMutex());
+        }
+    }
+
+    public void updateGraphProducerHoldingMutex() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankPureMutexStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerHoldingMutex());
+        }
+    }
+
+    public void updateGraphProducerBlockedByBuffer() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankPureMutexStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerBlockedByBuffer());
+        }
+    }
+
+    public void updateGraphProducerReleasingMutex() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankPureMutexStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerReleasingMutex());
+        }
+    }
+
+    public void updateGraphConsumerRequestingMutex() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankPureMutexStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerRequestingMutex());
+        }
+    }
+
+    public void updateGraphConsumerHoldingMutex() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankPureMutexStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerHoldingMutex());
+        }
+    }
+
+    public void updateGraphConsumerBlockedByBuffer() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankPureMutexStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerBlockedByBuffer());
+        }
+    }
+
+    public void updateGraphConsumerReleasingMutex() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankPureMutexStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerReleasingMutex());
+        }
+    }
+
+    // --- MÉTODO MODIFICADO ---
     @Override
     public void stopSimulation() {
-        running.set(false);
+        running.set(false); // Detiene los bucles while en los hilos
         if (currentStrategy != null) {
-            currentStrategy.stop();
+            currentStrategy.stop(); // Llama a interrupt() en los hilos
+            currentStrategy = null; // Libera la referencia a la estrategia
         }
-        repaintTimer.stop();
+        repaintTimer.stop(); // Detiene el timer de redibujado de este panel
+        // No limpiamos el grafo aquí, se hará al seleccionar nuevo problema/método
     }
 
     @Override
@@ -94,6 +191,7 @@ public class WaterTankSim extends JPanel implements SimPanel {
         return this;
     }
 
+    // --- MÉTODO MODIFICADO (uso de copia local de 'level') ---
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -104,24 +202,32 @@ public class WaterTankSim extends JPanel implements SimPanel {
         int tankH = Math.min((int) (h * 0.75), 760);
         int x0 = (w - tankW) / 2;
         int y0 = (int) (h * 0.12);
+
+        // Dibuja título
         g2.setFont(getFont().deriveFont(Font.BOLD, 18f));
         if (!methodTitle.isEmpty()) {
             String t = "Productores-Consumidores (" + methodTitle + ")";
             int tw = g2.getFontMetrics().stringWidth(t);
             g2.drawString(t, (w - tw) / 2, (int) (h * 0.06));
         }
+
+        // Dibuja tanque y marcas
         g2.setStroke(new BasicStroke(6f));
         g2.setColor(Color.BLACK);
         g2.drawRect(x0, y0, tankW, tankH);
         int slotH = tankH / SLOTS;
         g2.setColor(new Color(0, 0, 0, 120));
+        g2.setStroke(new BasicStroke(1f)); // Líneas más finas para las marcas
         for (int i = 1; i < SLOTS; i++) {
             int y = y0 + i * slotH;
             g2.drawLine(x0, y, x0 + tankW, y);
         }
+
+        // Dibuja nivel de agua (usando copia local)
         g2.setStroke(new BasicStroke(2f));
         int innerPad = 6;
-        for (int i = 0; i < level; i++) {
+        int currentLevel = this.level; // Lee el valor volátil una vez
+        for (int i = 0; i < currentLevel; i++) {
             int slotBottom = y0 + tankH - i * slotH;
             int yy = slotBottom - slotH + innerPad / 2;
             int xx = x0 + innerPad;
@@ -132,7 +238,9 @@ public class WaterTankSim extends JPanel implements SimPanel {
             g2.setColor(Color.BLACK);
             g2.drawRoundRect(xx, yy, ww, hh, 16, 16);
         }
-        double percentage = (double) level / SLOTS * 100.0;
+
+        // Dibuja texto de porcentaje (usando copia local)
+        double percentage = (double) currentLevel / SLOTS * 100.0;
         String percentageText = String.format("%.0f%%", percentage);
         g2.setFont(new Font("SansSerif", Font.BOLD, 24));
         g2.setColor(Color.DARK_GRAY);
@@ -140,6 +248,7 @@ public class WaterTankSim extends JPanel implements SimPanel {
         int textX = x0 + (tankW - fm.stringWidth(percentageText)) / 2;
         int textY = y0 + tankH + fm.getAscent() + 10;
         g2.drawString(percentageText, textX, textY);
+
         g2.dispose();
     }
-}
+} // Fin de la clase WaterTankSim

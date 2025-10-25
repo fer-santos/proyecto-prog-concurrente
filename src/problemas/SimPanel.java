@@ -2,6 +2,7 @@
 // --------------------------------------------------------
 package problemas; // <-- AÑADE ESTA LÍNEA
 
+import core.DrawingPanel;
 import javax.swing.JComponent;
 // import ProyectoPCyP.SyncMethod; // <-- AÑADE ESTE IMPORT
 
@@ -11,4 +12,6 @@ public interface SimPanel {
     void startWith(SyncMethod method); // <-- Usa el tipo calificado
     void stopSimulation();
     JComponent getComponent();
+    
+    void setDrawingPanel(DrawingPanel drawingPanel);
 }

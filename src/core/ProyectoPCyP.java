@@ -1,3 +1,4 @@
+package core;
 
 import problemas.SimPanel;
 import javax.swing.*;
@@ -8,6 +9,7 @@ import problemas.*; // Importamos todas las clases de problemas
 import problemas.SimPanel; // <-- AÑADE ESTE IMPORT
 import problemas.Problem;       // <-- AÑADE ESTA LÍNEA
 import problemas.SyncMethod;  // <-- AÑADE ESTA LÍNEA
+import core.DrawingPanel;
 
 public class ProyectoPCyP extends JFrame {
 
@@ -96,7 +98,10 @@ public class ProyectoPCyP extends JFrame {
         nuevo.addActionListener(e -> {
             int r = JOptionPane.showConfirmDialog(this, "¿Iniciar nuevo documento? Se perderán cambios no guardados.", "Nuevo", JOptionPane.OK_CANCEL_OPTION);
             if (r == JOptionPane.OK_OPTION) {
-                drawing.setData(new GraphData());
+                if (drawing != null) {
+                    drawing.clearGraph();
+                    drawing.setData(new GraphData());
+                }
             }
         });
         guardar.addActionListener(e -> saveToFile());
@@ -122,33 +127,54 @@ public class ProyectoPCyP extends JFrame {
     }
 
     private void methodNotImplementedYet(String name) {
+        // Ya no debería llamarse si todos los botones están conectados
         if (selectedProblem == Problem.NONE) {
             JOptionPane.showMessageDialog(this, "Primero selecciona un problema.", "Aviso", JOptionPane.INFORMATION_MESSAGE);
+            if (drawing != null) {
+                drawing.clearGraph();
+            }
             return;
         }
-        JOptionPane.showMessageDialog(this, name + " aún no está implementado. Usa por ahora Mutex o Semáforos.", "Aviso", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, name + " aún no está implementado.", "Aviso", JOptionPane.INFORMATION_MESSAGE);
+        if (drawing != null) {
+            drawing.clearGraph();
+        }
     }
 
     private void selectProblem(Problem problem, SimPanel sim) {
         if (currentSim != null) {
             currentSim.stopSimulation();
-            leftPanel.remove(currentSim.getComponent());
         }
         leftPanel.removeAll();
 
         selectedProblem = problem;
         currentSim = sim;
+
+        if (currentSim != null) {
+            currentSim.setDrawingPanel(this.drawing); // Pasa la referencia
+        }
+
         leftPanel.add(currentSim.getComponent(), BorderLayout.CENTER);
         leftPanel.revalidate();
         leftPanel.repaint();
-        currentSim.showSkeleton();
+
+        if (drawing != null) {
+            drawing.clearGraph(); // Limpia grafo
+        }
+        if (currentSim != null) {
+            currentSim.showSkeleton(); // Muestra esqueleto (que también limpia grafo)
+        }
     }
 
     private void selectMethod(SyncMethod method) {
         if (selectedProblem == Problem.NONE || currentSim == null) {
             JOptionPane.showMessageDialog(this, "Primero selecciona un problema (menú Problemas).", "Selecciona un problema", JOptionPane.WARNING_MESSAGE);
+            if (drawing != null) {
+                drawing.clearGraph(); // Limpia grafo
+            }
             return;
         }
+        // El setup del grafo se hará dentro de startWith del SimPanel
         currentSim.startWith(method);
     }
 

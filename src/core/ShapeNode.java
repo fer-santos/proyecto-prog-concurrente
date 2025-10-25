@@ -1,3 +1,5 @@
+package core;
+
 import java.io.Serializable;
 
 public class ShapeNode implements Serializable {
