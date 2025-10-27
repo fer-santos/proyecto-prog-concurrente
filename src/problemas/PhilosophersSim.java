@@ -96,6 +96,8 @@ public class PhilosophersSim extends JPanel implements SimPanel {
                     drawingPanel.setupPhilosophersGraph_Semaphore();
                 } else if (method == SyncMethod.VAR_COND) {
                     drawingPanel.setupPhilosophersGraph_Condition();
+                } else if (method == SyncMethod.MONITORS) {
+                    drawingPanel.setupPhilosophersGraph_Monitor();
                 }
                 // Add setups for other methods later
                 // else if (method == SyncMethod.SEMAPHORES) { drawingPanel.setupPhilosophersGraph_Semaphore(); }
@@ -234,6 +236,54 @@ public class PhilosophersSim extends JPanel implements SimPanel {
     public void updateGraphPhilosopherIdleCondition(int philosopherId, int leftFork, int rightFork) {
         if (drawingPanel != null && currentStrategy instanceof PhilosophersConditionStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherIdle_Cond("P" + philosopherId, "F" + leftFork, "F" + rightFork));
+        }
+    }
+
+    public void updateGraphPhilosopherRequestingMonitor(int philosopherId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherRequestingMonitor("P" + philosopherId));
+        }
+    }
+
+    public void updateGraphPhilosopherInsideMonitor(int philosopherId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherInsideMonitor("P" + philosopherId));
+        }
+    }
+
+    public void updateGraphPhilosopherWaitingMonitor(int philosopherId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherWaitingMonitor("P" + philosopherId));
+        }
+    }
+
+    public void updateGraphPhilosopherSignaledMonitor(int philosopherId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherSignaledMonitor("P" + philosopherId));
+        }
+    }
+
+    public void updateGraphPhilosopherEatingMonitor(int philosopherId, int leftFork, int rightFork) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherEatingMonitor("P" + philosopherId, "F" + leftFork, "F" + rightFork));
+        }
+    }
+
+    public void updateGraphPhilosopherReleasingMonitor(int philosopherId, int leftFork, int rightFork) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherReleasingMonitor("P" + philosopherId, "F" + leftFork, "F" + rightFork));
+        }
+    }
+
+    public void updateGraphPhilosopherExitMonitor(int philosopherId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherExitMonitor("P" + philosopherId));
+        }
+    }
+
+    public void updateGraphPhilosopherIdleMonitor(int philosopherId, int leftFork, int rightFork) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherIdleMonitor("P" + philosopherId, "F" + leftFork, "F" + rightFork));
         }
     }
     // For other strategies, we'll need different update methods (e.g., requesting/holding individual forks)

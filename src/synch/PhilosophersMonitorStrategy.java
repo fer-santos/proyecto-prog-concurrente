@@ -20,6 +20,7 @@ public class PhilosophersMonitorStrategy implements SynchronizationStrategy {
     // --- Componentes del Monitor ---
     private ReentrantLock lock; // Mutex para exclusión [cite: 99]
     private Condition[] self;   // Una variable de condición por filósofo [cite: 53]
+    private static final long VISUALIZATION_DELAY = 420L;
 
     public PhilosophersMonitorStrategy(PhilosophersSim panel) {
         this.panel = panel;
@@ -36,24 +37,29 @@ public class PhilosophersMonitorStrategy implements SynchronizationStrategy {
         for (int i = 0; i < PhilosophersSim.N; i++) {
             final int id = i;
             threads[i] = new Thread(() -> {
-                while (panel.running.get()) {
-                    try {
-                        // 1. Pensar
+                int left = id;
+                int right = (id + 1) % PhilosophersSim.N;
+                try {
+                    while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
                         panel.state[id] = State.THINKING;
+                        panel.updateGraphPhilosopherIdleMonitor(id, left, right);
                         sleepRand(400, 1000);
-                        
-                        // 2. Intentar tomar tenedores (procedimiento del monitor)
-                        pickup(id);
-                        
-                        // 3. Comer (solo si pickup tuvo éxito)
-                        sleepRand(500, 900);
-                        
-                        // 4. Soltar tenedores (procedimiento del monitor)
-                        drop(id);
 
-                    } catch (InterruptedException e) {
-                        return; // Salir del hilo si es interrumpido
+                        if (!panel.running.get()) {
+                            break;
+                        }
+
+                        pickup(id);
+                        sleepRand(500, 900);
+                        drop(id);
+                        panel.updateGraphPhilosopherIdleMonitor(id, left, right);
+                        sleepRand(200, 500);
                     }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    panel.updateGraphPhilosopherReleasingMonitor(id, left, right);
+                    panel.updateGraphPhilosopherExitMonitor(id);
                 }
             }, "Philosopher-Monitor-" + id); // Nombre del hilo
             threads[i].setDaemon(true);
@@ -65,39 +71,68 @@ public class PhilosophersMonitorStrategy implements SynchronizationStrategy {
      * Procedimiento del monitor para tomar los tenedores.
      */
     private void pickup(int id) throws InterruptedException {
-        lock.lock(); // Entra al monitor [cite: 100]
+        panel.updateGraphPhilosopherRequestingMonitor(id);
+        boolean locked = false;
+        lock.lockInterruptibly();
+        locked = true;
         try {
+            panel.updateGraphPhilosopherInsideMonitor(id);
+            Thread.sleep(VISUALIZATION_DELAY);
+
             panel.state[id] = State.HUNGRY;
-            test(id); // Intenta comer (podría cambiar state a EATING)
-            
-            // Si test() no lo puso a comer, espera en su condición
-            if (panel.state[id] != State.EATING) {
-                self[id].await(); // Libera el lock mientras espera [cite: 46, 109]
+            test(id);
+
+            while (panel.state[id] != State.EATING) {
+                panel.updateGraphPhilosopherWaitingMonitor(id);
+                Thread.sleep(VISUALIZATION_DELAY);
+                self[id].await();
+                panel.updateGraphPhilosopherSignaledMonitor(id);
+                Thread.sleep(VISUALIZATION_DELAY);
+                panel.updateGraphPhilosopherInsideMonitor(id);
+                Thread.sleep(VISUALIZATION_DELAY);
             }
+
+            int left = id;
+            int right = (id + 1) % PhilosophersSim.N;
+            panel.updateGraphPhilosopherEatingMonitor(id, left, right);
+            Thread.sleep(VISUALIZATION_DELAY);
         } finally {
-            lock.unlock(); // Sale del monitor [cite: 100, 105]
+            if (locked) {
+                panel.updateGraphPhilosopherExitMonitor(id);
+                lock.unlock();
+            }
         }
     }
 
     /**
      * Procedimiento del monitor para soltar los tenedores.
      */
-    private void drop(int id) {
-        lock.lock(); // Entra al monitor [cite: 100]
+    private void drop(int id) throws InterruptedException {
+        panel.updateGraphPhilosopherRequestingMonitor(id);
+        boolean locked = false;
+        lock.lockInterruptibly();
+        locked = true;
         try {
-            panel.state[id] = State.THINKING;
-            
-            // Actualiza visualizador (suelta tenedor izq 'id' y der '(id+1)%N')
-            panel.chopstickOwner[id] = -1;
-            panel.chopstickOwner[(id + 1) % PhilosophersSim.N] = -1;
+            panel.updateGraphPhilosopherInsideMonitor(id);
+            Thread.sleep(VISUALIZATION_DELAY);
 
-            // Verifica si los vecinos ahora pueden comer
+            panel.state[id] = State.THINKING;
+            int leftFork = id;
+            int rightFork = (id + 1) % PhilosophersSim.N;
+            panel.updateGraphPhilosopherReleasingMonitor(id, leftFork, rightFork);
+            panel.chopstickOwner[leftFork] = -1;
+            panel.chopstickOwner[rightFork] = -1;
+            Thread.sleep(VISUALIZATION_DELAY);
+
             int left = (id + PhilosophersSim.N - 1) % PhilosophersSim.N;
             int right = (id + 1) % PhilosophersSim.N;
             test(left);
             test(right);
         } finally {
-            lock.unlock(); // Sale del monitor [cite: 100, 105]
+            if (locked) {
+                panel.updateGraphPhilosopherExitMonitor(id);
+                lock.unlock();
+            }
         }
     }
 
