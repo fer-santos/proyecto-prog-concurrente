@@ -301,6 +301,23 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeConnection(forkLabel, philosopherLabel);
     }
 
+    private synchronized void clearConditionLockLink(String philosopherLabel) {
+        if (philosopherLabel == null) {
+            return;
+        }
+        removeConnection(philosopherLabel, "R_Lock_Ph");
+        removeConnection("R_Lock_Ph", philosopherLabel);
+    }
+
+    private synchronized void clearConditionWaitLink(String philosopherLabel) {
+        if (philosopherLabel == null) {
+            return;
+        }
+        String condLabel = "Cond_" + philosopherLabel;
+        removeConnection(philosopherLabel, condLabel);
+        removeConnection(condLabel, philosopherLabel);
+    }
+
     private synchronized void addConnectionIfNotExists(String fromLabel, String toLabel, String kind) {
         /* ... código ... */
         if (fromLabel == null || toLabel == null || kind == null || data == null) {
@@ -991,6 +1008,103 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         clearForkLink(philosopherLabel, leftFork);
         clearForkLink(philosopherLabel, rightFork);
         System.out.println("GRAPH PHILO SEM: " + philosopherLabel + " libera recursos");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void setupPhilosophersGraph_Condition() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int philosophers = 5;
+        int outerRadius = (int) (Math.min(width, height) * 0.34);
+        int innerRadius = (int) (outerRadius * 0.55);
+        double step = 2 * Math.PI / philosophers;
+        for (int i = 0; i < philosophers; i++) {
+            double ang = -Math.PI / 2 + i * step;
+            int px = centerX + (int) Math.round(Math.cos(ang) * outerRadius);
+            int py = centerY + (int) Math.round(Math.sin(ang) * outerRadius);
+            addNodeIfNotExists("P" + i, NodeType.PROCESO, px, py);
+        }
+        addNodeIfNotExists("R_Lock_Ph", NodeType.RECURSO, centerX, centerY);
+        for (int i = 0; i < philosophers; i++) {
+            double ang = -Math.PI / 2 + i * step;
+            int cx = centerX + (int) Math.round(Math.cos(ang) * innerRadius);
+            int cy = centerY + (int) Math.round(Math.sin(ang) * innerRadius);
+            addNodeIfNotExists("Cond_P" + i, NodeType.RECURSO, cx, cy);
+        }
+        int forkRadius = (int) (outerRadius * 1.25);
+        for (int i = 0; i < philosophers; i++) {
+            double ang = -Math.PI / 2 + i * step + step / 2.0;
+            int fx = centerX + (int) Math.round(Math.cos(ang) * forkRadius);
+            int fy = centerY + (int) Math.round(Math.sin(ang) * forkRadius);
+            addNodeIfNotExists("F" + i, NodeType.RECURSO, fx, fy);
+        }
+    }
+
+    public synchronized void showPhilosopherRequestingLock_Cond(String philosopherLabel) {
+        clearConditionLockLink(philosopherLabel);
+        clearConditionWaitLink(philosopherLabel);
+        addConnectionIfNotExists(philosopherLabel, "R_Lock_Ph", "Solicitud");
+        System.out.println("GRAPH PHILO COND: " + philosopherLabel + " solicita R_Lock_Ph");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherHoldingLock_Cond(String philosopherLabel) {
+        clearConditionLockLink(philosopherLabel);
+        addConnectionIfNotExists("R_Lock_Ph", philosopherLabel, "Dentro");
+        System.out.println("GRAPH PHILO COND: R_Lock_Ph -> " + philosopherLabel);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherWaitingCondition_Cond(String philosopherLabel) {
+        clearConditionLockLink(philosopherLabel);
+        clearConditionWaitLink(philosopherLabel);
+        addConnectionIfNotExists(philosopherLabel, "Cond_" + philosopherLabel, "Espera");
+        System.out.println("GRAPH PHILO COND: " + philosopherLabel + " espera Cond");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherSignaledCondition_Cond(String philosopherLabel) {
+        clearConditionWaitLink(philosopherLabel);
+        addConnectionIfNotExists("Cond_" + philosopherLabel, philosopherLabel, "Signal");
+        System.out.println("GRAPH PHILO COND: Cond -> " + philosopherLabel);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherEating_Cond(String philosopherLabel, String leftFork, String rightFork) {
+        clearConditionWaitLink(philosopherLabel);
+        addConnectionIfNotExists("R_Lock_Ph", philosopherLabel, "Dentro");
+        clearForkLink(philosopherLabel, leftFork);
+        clearForkLink(philosopherLabel, rightFork);
+        addConnectionIfNotExists(leftFork, philosopherLabel, "Uso");
+        addConnectionIfNotExists(rightFork, philosopherLabel, "Uso");
+        System.out.println("GRAPH PHILO COND: " + philosopherLabel + " come con " + leftFork + ", " + rightFork);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherReleasing_Cond(String philosopherLabel, String leftFork, String rightFork) {
+        clearForkLink(philosopherLabel, leftFork);
+        clearForkLink(philosopherLabel, rightFork);
+        clearConditionLockLink(philosopherLabel);
+        clearConditionWaitLink(philosopherLabel);
+        System.out.println("GRAPH PHILO COND: " + philosopherLabel + " libera recursos");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherReleasingLock_Cond(String philosopherLabel) {
+        clearConditionLockLink(philosopherLabel);
+        System.out.println("GRAPH PHILO COND: " + philosopherLabel + " libera R_Lock_Ph");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherIdle_Cond(String philosopherLabel, String leftFork, String rightFork) {
+        clearConditionLockLink(philosopherLabel);
+        clearConditionWaitLink(philosopherLabel);
+        clearForkLink(philosopherLabel, leftFork);
+        clearForkLink(philosopherLabel, rightFork);
+        System.out.println("GRAPH PHILO COND: " + philosopherLabel + " inactivo");
         SwingUtilities.invokeLater(this::repaint);
     }
 

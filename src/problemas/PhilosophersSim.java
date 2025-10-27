@@ -94,6 +94,8 @@ public class PhilosophersSim extends JPanel implements SimPanel {
                     drawingPanel.setupPhilosophersGraph_Mutex();
                 } else if (method == SyncMethod.SEMAPHORES) {
                     drawingPanel.setupPhilosophersGraph_Semaphore();
+                } else if (method == SyncMethod.VAR_COND) {
+                    drawingPanel.setupPhilosophersGraph_Condition();
                 }
                 // Add setups for other methods later
                 // else if (method == SyncMethod.SEMAPHORES) { drawingPanel.setupPhilosophersGraph_Semaphore(); }
@@ -184,6 +186,54 @@ public class PhilosophersSim extends JPanel implements SimPanel {
     public void updateGraphPhilosopherReleasingSemaphore(int philosopherId, int leftFork, int rightFork) {
         if (drawingPanel != null && currentStrategy instanceof PhilosophersSemaphoreStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherReleasingResources_Sem("P" + philosopherId, "F" + leftFork, "F" + rightFork));
+        }
+    }
+
+    public void updateGraphPhilosopherRequestingLockCondition(int philosopherId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherRequestingLock_Cond("P" + philosopherId));
+        }
+    }
+
+    public void updateGraphPhilosopherHoldingLockCondition(int philosopherId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherHoldingLock_Cond("P" + philosopherId));
+        }
+    }
+
+    public void updateGraphPhilosopherWaitingCondition(int philosopherId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherWaitingCondition_Cond("P" + philosopherId));
+        }
+    }
+
+    public void updateGraphPhilosopherSignaledCondition(int philosopherId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherSignaledCondition_Cond("P" + philosopherId));
+        }
+    }
+
+    public void updateGraphPhilosopherEatingCondition(int philosopherId, int leftFork, int rightFork) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherEating_Cond("P" + philosopherId, "F" + leftFork, "F" + rightFork));
+        }
+    }
+
+    public void updateGraphPhilosopherReleasingCondition(int philosopherId, int leftFork, int rightFork) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherReleasing_Cond("P" + philosopherId, "F" + leftFork, "F" + rightFork));
+        }
+    }
+
+    public void updateGraphPhilosopherReleasingLockCondition(int philosopherId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherReleasingLock_Cond("P" + philosopherId));
+        }
+    }
+
+    public void updateGraphPhilosopherIdleCondition(int philosopherId, int leftFork, int rightFork) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherIdle_Cond("P" + philosopherId, "F" + leftFork, "F" + rightFork));
         }
     }
     // For other strategies, we'll need different update methods (e.g., requesting/holding individual forks)
