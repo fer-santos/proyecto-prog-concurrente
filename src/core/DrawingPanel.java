@@ -335,6 +335,16 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeConnection(condLabel, philosopherLabel);
     }
 
+    private synchronized void clearBarrierPhilosopherLinks(String philosopherLabel) {
+        if (philosopherLabel == null) {
+            return;
+        }
+        removeConnection(philosopherLabel, "R_Barrier_Ph");
+        removeConnection("R_Barrier_Ph", philosopherLabel);
+        removeConnection(philosopherLabel, "R_Token_Ph");
+        removeConnection("R_Token_Ph", philosopherLabel);
+    }
+
     private synchronized void addConnectionIfNotExists(String fromLabel, String toLabel, String kind) {
         /* ... código ... */
         if (fromLabel == null || toLabel == null || kind == null || data == null) {
@@ -1218,6 +1228,87 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         clearForkLink(philosopherLabel, leftFork);
         clearForkLink(philosopherLabel, rightFork);
         System.out.println("GRAPH PHILO MON: " + philosopherLabel + " inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void setupPhilosophersGraph_Barrier() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int philosophers = 5;
+        int outerRadius = (int) (Math.min(width, height) * 0.34);
+        double step = 2 * Math.PI / philosophers;
+        for (int i = 0; i < philosophers; i++) {
+            double ang = -Math.PI / 2 + i * step;
+            int px = centerX + (int) Math.round(Math.cos(ang) * outerRadius);
+            int py = centerY + (int) Math.round(Math.sin(ang) * outerRadius);
+            addNodeIfNotExists("P" + i, NodeType.PROCESO, px, py);
+        }
+        addNodeIfNotExists("R_Barrier_Ph", NodeType.RECURSO, centerX, centerY - (int) (Math.min(width, height) * 0.1));
+        addNodeIfNotExists("R_Token_Ph", NodeType.RECURSO, centerX, centerY + (int) (Math.min(width, height) * 0.08));
+        int forkRadius = (int) (outerRadius * 1.25);
+        for (int i = 0; i < philosophers; i++) {
+            double ang = -Math.PI / 2 + i * step + step / 2.0;
+            int fx = centerX + (int) Math.round(Math.cos(ang) * forkRadius);
+            int fy = centerY + (int) Math.round(Math.sin(ang) * forkRadius);
+            addNodeIfNotExists("F" + i, NodeType.RECURSO, fx, fy);
+        }
+    }
+
+    public synchronized void showPhilosopherThinkingBarrier(String philosopherLabel, String leftFork, String rightFork) {
+        clearBarrierPhilosopherLinks(philosopherLabel);
+        clearForkLink(philosopherLabel, leftFork);
+        clearForkLink(philosopherLabel, rightFork);
+        System.out.println("GRAPH PHILO BAR: " + philosopherLabel + " pensando");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherWaitingBarrier(String philosopherLabel) {
+        clearBarrierPhilosopherLinks(philosopherLabel);
+        addConnectionIfNotExists(philosopherLabel, "R_Barrier_Ph", "Espera");
+        System.out.println("GRAPH PHILO BAR: " + philosopherLabel + " espera barrera");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherReleasedBarrier(String philosopherLabel) {
+        clearBarrierPhilosopherLinks(philosopherLabel);
+        addConnectionIfNotExists("R_Barrier_Ph", philosopherLabel, "Cruza");
+        addConnectionIfNotExists("R_Token_Ph", philosopherLabel, "Turno");
+        System.out.println("GRAPH PHILO BAR: " + philosopherLabel + " cruza barrera");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherRequestingForkBarrier(String philosopherLabel, String forkLabel) {
+        clearForkLink(philosopherLabel, forkLabel);
+        addConnectionIfNotExists(philosopherLabel, forkLabel, "Solicitud");
+        System.out.println("GRAPH PHILO BAR: " + philosopherLabel + " solicita " + forkLabel);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherHoldingForkBarrier(String philosopherLabel, String forkLabel) {
+        clearForkLink(philosopherLabel, forkLabel);
+        addConnectionIfNotExists(forkLabel, philosopherLabel, "Asignado");
+        System.out.println("GRAPH PHILO BAR: " + forkLabel + " -> " + philosopherLabel);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherEatingBarrier(String philosopherLabel, String leftFork, String rightFork) {
+        clearForkLink(philosopherLabel, leftFork);
+        clearForkLink(philosopherLabel, rightFork);
+        addConnectionIfNotExists("R_Token_Ph", philosopherLabel, "Sesión");
+        addConnectionIfNotExists(leftFork, philosopherLabel, "Uso");
+        addConnectionIfNotExists(rightFork, philosopherLabel, "Uso");
+        System.out.println("GRAPH PHILO BAR: " + philosopherLabel + " comiendo con " + leftFork + ", " + rightFork);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherReleasingBarrier(String philosopherLabel, String leftFork, String rightFork) {
+        clearBarrierPhilosopherLinks(philosopherLabel);
+        clearForkLink(philosopherLabel, leftFork);
+        clearForkLink(philosopherLabel, rightFork);
+        System.out.println("GRAPH PHILO BAR: " + philosopherLabel + " libera recursos");
         SwingUtilities.invokeLater(this::repaint);
     }
 

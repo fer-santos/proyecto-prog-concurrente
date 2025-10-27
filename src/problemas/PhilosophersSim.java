@@ -98,6 +98,8 @@ public class PhilosophersSim extends JPanel implements SimPanel {
                     drawingPanel.setupPhilosophersGraph_Condition();
                 } else if (method == SyncMethod.MONITORS) {
                     drawingPanel.setupPhilosophersGraph_Monitor();
+                } else if (method == SyncMethod.BARRIERS) {
+                    drawingPanel.setupPhilosophersGraph_Barrier();
                 }
                 // Add setups for other methods later
                 // else if (method == SyncMethod.SEMAPHORES) { drawingPanel.setupPhilosophersGraph_Semaphore(); }
@@ -284,6 +286,48 @@ public class PhilosophersSim extends JPanel implements SimPanel {
     public void updateGraphPhilosopherIdleMonitor(int philosopherId, int leftFork, int rightFork) {
         if (drawingPanel != null && currentStrategy instanceof PhilosophersMonitorStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherIdleMonitor("P" + philosopherId, "F" + leftFork, "F" + rightFork));
+        }
+    }
+
+    public void updateGraphPhilosopherThinkingBarrier(int philosopherId, int leftFork, int rightFork) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherThinkingBarrier("P" + philosopherId, "F" + leftFork, "F" + rightFork));
+        }
+    }
+
+    public void updateGraphPhilosopherWaitingBarrier(int philosopherId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherWaitingBarrier("P" + philosopherId));
+        }
+    }
+
+    public void updateGraphPhilosopherReleasedBarrier(int philosopherId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherReleasedBarrier("P" + philosopherId));
+        }
+    }
+
+    public void updateGraphPhilosopherRequestingForkBarrier(int philosopherId, int forkId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherRequestingForkBarrier("P" + philosopherId, "F" + forkId));
+        }
+    }
+
+    public void updateGraphPhilosopherHoldingForkBarrier(int philosopherId, int forkId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherHoldingForkBarrier("P" + philosopherId, "F" + forkId));
+        }
+    }
+
+    public void updateGraphPhilosopherEatingBarrier(int philosopherId, int leftFork, int rightFork) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherEatingBarrier("P" + philosopherId, "F" + leftFork, "F" + rightFork));
+        }
+    }
+
+    public void updateGraphPhilosopherReleasingBarrier(int philosopherId, int leftFork, int rightFork) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherReleasingBarrier("P" + philosopherId, "F" + leftFork, "F" + rightFork));
         }
     }
     // For other strategies, we'll need different update methods (e.g., requesting/holding individual forks)

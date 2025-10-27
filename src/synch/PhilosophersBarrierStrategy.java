@@ -25,6 +25,7 @@ public class PhilosophersBarrierStrategy implements SynchronizationStrategy {
 
     // Semáforos para proteger cada tenedor individualmente
     private Semaphore[] forks;
+    private static final long VISUALIZATION_DELAY = 420L;
 
     public PhilosophersBarrierStrategy(PhilosophersSim panel) {
         this.panel = panel;
@@ -41,56 +42,80 @@ public class PhilosophersBarrierStrategy implements SynchronizationStrategy {
         for (int i = 0; i < PhilosophersSim.N; i++) {
             final int id = i;
             threads[i] = new Thread(() -> {
-                while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
-                    try {
-                        // 1. Pensar
+                final int leftFork = id;
+                final int rightFork = (id + 1) % PhilosophersSim.N;
+                boolean leftHeld = false;
+                boolean rightHeld = false;
+                try {
+                    while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
                         panel.state[id] = State.THINKING;
-                        // Limpiar tenedores visualmente al pensar (si los tenía)
-                        if (panel.chopstickOwner[id] == id) {
-                            panel.chopstickOwner[id] = -1;
-                        }
-                        if (panel.chopstickOwner[(id + 1) % PhilosophersSim.N] == id) {
-                            panel.chopstickOwner[(id + 1) % PhilosophersSim.N] = -1;
-                        }
+                        panel.updateGraphPhilosopherThinkingBarrier(id, leftFork, rightFork);
+                        panel.chopstickOwner[leftFork] = -1;
+                        panel.chopstickOwner[rightFork] = -1;
                         sleepRand(400, 1000);
 
-                        // 2. Esperar a que TODOS terminen de pensar
-                        panel.state[id] = State.HUNGRY; // Marcar como hambriento antes de esperar
+                        if (!panel.running.get()) {
+                            break;
+                        }
+
+                        panel.state[id] = State.HUNGRY;
+                        panel.updateGraphPhilosopherWaitingBarrier(id);
+                        Thread.sleep(VISUALIZATION_DELAY);
                         barrier.await();
+                        panel.updateGraphPhilosopherReleasedBarrier(id);
+                        Thread.sleep(VISUALIZATION_DELAY);
 
-                        // 3. Intentar tomar tenedores (IZQUIERDA, luego DERECHA - propenso a deadlock)
-                        int leftFork = id;
-                        int rightFork = (id + 1) % PhilosophersSim.N;
-
+                        panel.updateGraphPhilosopherRequestingForkBarrier(id, leftFork);
+                        Thread.sleep(VISUALIZATION_DELAY);
                         forks[leftFork].acquire();
-                        panel.chopstickOwner[leftFork] = id; // Visualización
-                        // sleepRand(50, 150); // Pequeña pausa para aumentar probabilidad de deadlock (opcional)
-                        forks[rightFork].acquire();
-                        panel.chopstickOwner[rightFork] = id; // Visualización
+                        leftHeld = true;
+                        panel.chopstickOwner[leftFork] = id;
+                        panel.updateGraphPhilosopherHoldingForkBarrier(id, leftFork);
+                        Thread.sleep(VISUALIZATION_DELAY);
 
-                        // 4. Comer (Solo si consiguió ambos tenedores)
+                        panel.updateGraphPhilosopherRequestingForkBarrier(id, rightFork);
+                        Thread.sleep(VISUALIZATION_DELAY);
+                        forks[rightFork].acquire();
+                        rightHeld = true;
+                        panel.chopstickOwner[rightFork] = id;
+                        panel.updateGraphPhilosopherHoldingForkBarrier(id, rightFork);
                         panel.state[id] = State.EATING;
+                        panel.updateGraphPhilosopherEatingBarrier(id, leftFork, rightFork);
                         sleepRand(500, 900);
 
-                        // 5. Soltar tenedores
-                        panel.chopstickOwner[leftFork] = -1; // Visualización
-                        forks[leftFork].release();
-                        panel.chopstickOwner[rightFork] = -1; // Visualización
-                        forks[rightFork].release();
-                        panel.state[id] = State.THINKING; // Vuelve a pensar después de comer
+                        panel.chopstickOwner[leftFork] = -1;
+                        panel.chopstickOwner[rightFork] = -1;
+                        panel.updateGraphPhilosopherReleasingBarrier(id, leftFork, rightFork);
+                        Thread.sleep(VISUALIZATION_DELAY);
+                        if (rightHeld) {
+                            forks[rightFork].release();
+                            rightHeld = false;
+                        }
+                        if (leftHeld) {
+                            forks[leftFork].release();
+                            leftHeld = false;
+                        }
+                        panel.state[id] = State.THINKING;
 
-                        // 6. Esperar a que TODOS los que comieron terminen de soltar tenedores
+                        panel.updateGraphPhilosopherWaitingBarrier(id);
+                        Thread.sleep(VISUALIZATION_DELAY);
                         barrier.await();
-
-                    } catch (InterruptedException e) {
-                        // Si se interrumpe (ej. al parar), liberar tenedores si los tenía
-                        cleanupForks(id);
-                        Thread.currentThread().interrupt(); // Salir
-                    } catch (BrokenBarrierException e) {
-                        // Si la barrera se rompe, liberar tenedores y salir
-                        cleanupForks(id);
-                        Thread.currentThread().interrupt();
+                        panel.updateGraphPhilosopherReleasedBarrier(id);
+                        Thread.sleep(VISUALIZATION_DELAY);
                     }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } catch (BrokenBarrierException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    if (rightHeld) {
+                        forks[rightFork].release();
+                    }
+                    if (leftHeld) {
+                        forks[leftFork].release();
+                    }
+                    cleanupForks(id);
+                    panel.updateGraphPhilosopherReleasingBarrier(id, leftFork, rightFork);
                 }
             }, "Philosopher-Barrier-" + id);
             threads[i].setDaemon(true);
