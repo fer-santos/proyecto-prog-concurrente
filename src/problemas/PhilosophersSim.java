@@ -92,6 +92,8 @@ public class PhilosophersSim extends JPanel implements SimPanel {
                 if (method == SyncMethod.MUTEX) {
                     // Call a specific setup method (to be created in DrawingPanel)
                     drawingPanel.setupPhilosophersGraph_Mutex();
+                } else if (method == SyncMethod.SEMAPHORES) {
+                    drawingPanel.setupPhilosophersGraph_Semaphore();
                 }
                 // Add setups for other methods later
                 // else if (method == SyncMethod.SEMAPHORES) { drawingPanel.setupPhilosophersGraph_Semaphore(); }
@@ -146,6 +148,42 @@ public class PhilosophersSim extends JPanel implements SimPanel {
     public void updateGraphPhilosopherReleasingLock(int philosopherId) {
         if (drawingPanel != null && currentStrategy instanceof PhilosophersMutexStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherReleasingLock_Mutex("P" + philosopherId));
+        }
+    }
+
+    public void updateGraphPhilosopherRequestingWaiter(int philosopherId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherRequestingWaiter_Sem("P" + philosopherId));
+        }
+    }
+
+    public void updateGraphPhilosopherGrantedWaiter(int philosopherId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherGrantedWaiter_Sem("P" + philosopherId));
+        }
+    }
+
+    public void updateGraphPhilosopherRequestingFork(int philosopherId, int forkId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherRequestingFork_Sem("P" + philosopherId, "F" + forkId));
+        }
+    }
+
+    public void updateGraphPhilosopherHoldingFork(int philosopherId, int forkId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherHoldingFork_Sem("P" + philosopherId, "F" + forkId));
+        }
+    }
+
+    public void updateGraphPhilosopherEatingSemaphore(int philosopherId, int leftFork, int rightFork) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherEating_Sem("P" + philosopherId, "F" + leftFork, "F" + rightFork));
+        }
+    }
+
+    public void updateGraphPhilosopherReleasingSemaphore(int philosopherId, int leftFork, int rightFork) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherReleasingResources_Sem("P" + philosopherId, "F" + leftFork, "F" + rightFork));
         }
     }
     // For other strategies, we'll need different update methods (e.g., requesting/holding individual forks)
