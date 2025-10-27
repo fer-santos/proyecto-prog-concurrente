@@ -367,6 +367,18 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeConnection("R_WaitRoom", processLabel);
     }
 
+    private synchronized void clearSleepingBarberConditionLinks(String processLabel) {
+        if (processLabel == null) {
+            return;
+        }
+        removeConnection(processLabel, "R_Lock_SB");
+        removeConnection("R_Lock_SB", processLabel);
+        removeConnection(processLabel, "Cond_Customers");
+        removeConnection("Cond_Customers", processLabel);
+        removeConnection(processLabel, "R_WaitRoom");
+        removeConnection("R_WaitRoom", processLabel);
+    }
+
     private synchronized void addConnectionIfNotExists(String fromLabel, String toLabel, String kind) {
         /* ... código ... */
         if (fromLabel == null || toLabel == null || kind == null || data == null) {
@@ -1507,6 +1519,114 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     public synchronized void showBarberIdleSemaphore_Barber() {
         clearSleepingBarberSemaphoreLinks("Barber");
         System.out.println("GRAPH BARBER SEM: Barber inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void setupSleepingBarberGraph_Condition() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int offsetX = (int) (width * 0.28);
+        int processY = centerY + (int) (height * 0.24);
+        int lockY = centerY - (int) (height * 0.22);
+        int conditionY = centerY;
+        int waitRoomY = centerY + (int) (height * 0.06);
+        addNodeIfNotExists("Customer", NodeType.PROCESO, centerX - offsetX, processY);
+        addNodeIfNotExists("Barber", NodeType.PROCESO, centerX + offsetX, processY);
+        addNodeIfNotExists("R_Lock_SB", NodeType.RECURSO, centerX, lockY);
+        addNodeIfNotExists("Cond_Customers", NodeType.RECURSO, centerX + (int) (width * 0.12), conditionY);
+        addNodeIfNotExists("R_WaitRoom", NodeType.RECURSO, centerX - (int) (width * 0.12), waitRoomY);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerRequestingLockCondition_Barber() {
+        clearSleepingBarberConditionLinks("Customer");
+        addConnectionIfNotExists("Customer", "R_Lock_SB", "Espera");
+        System.out.println("GRAPH BARBER COND: Customer espera R_Lock_SB");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerHoldingLockCondition_Barber() {
+        clearSleepingBarberConditionLinks("Customer");
+        addConnectionIfNotExists("R_Lock_SB", "Customer", "Dentro");
+        System.out.println("GRAPH BARBER COND: R_Lock_SB -> Customer");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerSeatedCondition_Barber() {
+        clearSleepingBarberConditionLinks("Customer");
+        addConnectionIfNotExists("R_Lock_SB", "Customer", "Dentro");
+        addConnectionIfNotExists("Customer", "R_WaitRoom", "Silla");
+        System.out.println("GRAPH BARBER COND: Customer ocupa silla");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerQueueFullCondition_Barber() {
+        clearSleepingBarberConditionLinks("Customer");
+        addConnectionIfNotExists("Customer", "R_WaitRoom", "Lleno");
+        System.out.println("GRAPH BARBER COND: Customer sin silla");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerSignalingCondition_Barber() {
+        clearSleepingBarberConditionLinks("Customer");
+        addConnectionIfNotExists("R_Lock_SB", "Customer", "Dentro");
+        addConnectionIfNotExists("Customer", "Cond_Customers", "Signal");
+        System.out.println("GRAPH BARBER COND: Customer signal Cond_Customers");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerReleasingLockCondition_Barber() {
+        clearSleepingBarberConditionLinks("Customer");
+        System.out.println("GRAPH BARBER COND: Customer libera R_Lock_SB");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerIdleCondition_Barber() {
+        clearSleepingBarberConditionLinks("Customer");
+        System.out.println("GRAPH BARBER COND: Customer inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberRequestingLockCondition_Barber() {
+        clearSleepingBarberConditionLinks("Barber");
+        addConnectionIfNotExists("Barber", "R_Lock_SB", "Espera");
+        System.out.println("GRAPH BARBER COND: Barber espera R_Lock_SB");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberHoldingLockCondition_Barber() {
+        clearSleepingBarberConditionLinks("Barber");
+        addConnectionIfNotExists("R_Lock_SB", "Barber", "Dentro");
+        System.out.println("GRAPH BARBER COND: R_Lock_SB -> Barber");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberWaitingCondition_Barber() {
+        clearSleepingBarberConditionLinks("Barber");
+        addConnectionIfNotExists("Barber", "Cond_Customers", "Wait");
+        System.out.println("GRAPH BARBER COND: Barber espera Cond_Customers");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberSignaledCondition_Barber() {
+        clearSleepingBarberConditionLinks("Barber");
+        addConnectionIfNotExists("Cond_Customers", "Barber", "Signal");
+        System.out.println("GRAPH BARBER COND: Cond_Customers -> Barber");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberReleasingLockCondition_Barber() {
+        clearSleepingBarberConditionLinks("Barber");
+        System.out.println("GRAPH BARBER COND: Barber libera R_Lock_SB");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberIdleCondition_Barber() {
+        clearSleepingBarberConditionLinks("Barber");
+        System.out.println("GRAPH BARBER COND: Barber inactivo");
         SwingUtilities.invokeLater(this::repaint);
     }
 

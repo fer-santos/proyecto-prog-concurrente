@@ -117,6 +117,8 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
                     drawingPanel.setupSleepingBarberGraph();
                 } else if (method == SyncMethod.SEMAPHORES) {
                     drawingPanel.setupSleepingBarberGraph_Semaphore();
+                } else if (method == SyncMethod.VAR_COND) {
+                    drawingPanel.setupSleepingBarberGraph_Condition();
                 }
                 // Añadiremos setups para otros métodos después
                 // else if (method == SyncMethod.SEMAPHORES) { ... }
@@ -279,6 +281,85 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
     public void updateGraphBarberIdleSemaphore() {
         if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showBarberIdleSemaphore_Barber());
+        }
+    }
+
+    // --- NUEVOS MÉTODOS (Variable Condición) ---
+    public void updateGraphCustomerRequestingLockCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerRequestingLockCondition_Barber());
+        }
+    }
+
+    public void updateGraphCustomerHoldingLockCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerHoldingLockCondition_Barber());
+        }
+    }
+
+    public void updateGraphCustomerSeatedCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerSeatedCondition_Barber());
+        }
+    }
+
+    public void updateGraphCustomerQueueFullCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerQueueFullCondition_Barber());
+        }
+    }
+
+    public void updateGraphCustomerSignalingCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerSignalingCondition_Barber());
+        }
+    }
+
+    public void updateGraphCustomerReleasingLockCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerReleasingLockCondition_Barber());
+        }
+    }
+
+    public void updateGraphCustomerIdleCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerIdleCondition_Barber());
+        }
+    }
+
+    public void updateGraphBarberRequestingLockCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberRequestingLockCondition_Barber());
+        }
+    }
+
+    public void updateGraphBarberHoldingLockCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberHoldingLockCondition_Barber());
+        }
+    }
+
+    public void updateGraphBarberWaitingCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberWaitingCondition_Barber());
+        }
+    }
+
+    public void updateGraphBarberSignaledCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberSignaledCondition_Barber());
+        }
+    }
+
+    public void updateGraphBarberReleasingLockCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberReleasingLockCondition_Barber());
+        }
+    }
+
+    public void updateGraphBarberIdleCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberIdleCondition_Barber());
         }
     }
     // Podríamos añadir más estados si quisiéramos refinar el grafo (ej. cliente->silla, barber->cliente)
