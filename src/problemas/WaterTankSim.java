@@ -87,6 +87,8 @@ public class WaterTankSim extends JPanel implements SimPanel {
                     drawingPanel.setupProducerConsumerConditionGraph();
                 } else if (method == SyncMethod.MONITORS) {
                     drawingPanel.setupProducerConsumerMonitorGraph();
+                } else if (method == SyncMethod.BARRIERS) {
+                    drawingPanel.setupProducerConsumerBarrierGraph();
                 }
             });
         }
@@ -439,6 +441,54 @@ public class WaterTankSim extends JPanel implements SimPanel {
     public void updateGraphConsumerIdleMonitor() {
         if (drawingPanel != null && currentStrategy instanceof WaterTankMonitorStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showConsumerIdleMonitor());
+        }
+    }
+
+    public void updateGraphProducerWorkingBarrier() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerWorkingBarrier());
+        }
+    }
+
+    public void updateGraphProducerWaitingBarrier() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerWaitingBarrier());
+        }
+    }
+
+    public void updateGraphProducerReleasedBarrier() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerReleasedBarrier());
+        }
+    }
+
+    public void updateGraphProducerIdleBarrier() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerIdleBarrier());
+        }
+    }
+
+    public void updateGraphConsumerWorkingBarrier() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerWorkingBarrier());
+        }
+    }
+
+    public void updateGraphConsumerWaitingBarrier() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerWaitingBarrier());
+        }
+    }
+
+    public void updateGraphConsumerReleasedBarrier() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerReleasedBarrier());
+        }
+    }
+
+    public void updateGraphConsumerIdleBarrier() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerIdleBarrier());
         }
     }
 

@@ -268,6 +268,15 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeBidirectional("C1", "Cond_NotEmpty_M");
     }
 
+    private synchronized void clearBarrierLinks() {
+        removeBidirectional("P1", "R_Barrier");
+        removeBidirectional("C1", "R_Barrier");
+        removeBidirectional("P1", "R_Buffer");
+        removeBidirectional("C1", "R_Buffer");
+        removeBidirectional("P1", "R_Token");
+        removeBidirectional("C1", "R_Token");
+    }
+
     private synchronized void addConnectionIfNotExists(String fromLabel, String toLabel, String kind) {
         /* ... código ... */
         if (fromLabel == null || toLabel == null || kind == null || data == null) {
@@ -776,6 +785,78 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     public synchronized void showConsumerIdleMonitor() {
         clearConsumerMonitorLinks();
         System.out.println("GRAPH MON: C1 inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    // --- Métodos específicos P-C Barreras ---
+    public synchronized void setupProducerConsumerBarrierGraph() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int midY = height / 2;
+        int topY = height / 5;
+        int bottomY = (int) (height * 0.78);
+        addNodeIfNotExists("P1", NodeType.PROCESO, centerX - 220, midY);
+        addNodeIfNotExists("C1", NodeType.PROCESO, centerX + 220, midY);
+        addNodeIfNotExists("R_Buffer", NodeType.RECURSO, centerX, bottomY);
+        addNodeIfNotExists("R_Barrier", NodeType.RECURSO, centerX, topY);
+        addNodeIfNotExists("R_Token", NodeType.RECURSO, centerX, midY - height / 6);
+    }
+
+    public synchronized void showProducerWorkingBarrier() {
+        clearBarrierLinks();
+        addConnectionIfNotExists("P1", "R_Buffer", "Produce");
+        System.out.println("GRAPH BAR: P1 produce");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerWaitingBarrier() {
+        clearBarrierLinks();
+        addConnectionIfNotExists("P1", "R_Barrier", "Espera");
+        System.out.println("GRAPH BAR: P1 espera barrera");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerReleasedBarrier() {
+        clearBarrierLinks();
+        addConnectionIfNotExists("R_Barrier", "P1", "Avanza");
+        addConnectionIfNotExists("R_Token", "P1", "Turno");
+        System.out.println("GRAPH BAR: P1 cruza barrera");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerIdleBarrier() {
+        clearBarrierLinks();
+        System.out.println("GRAPH BAR: P1 inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerWorkingBarrier() {
+        clearBarrierLinks();
+        addConnectionIfNotExists("C1", "R_Buffer", "Consume");
+        System.out.println("GRAPH BAR: C1 consume");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerWaitingBarrier() {
+        clearBarrierLinks();
+        addConnectionIfNotExists("C1", "R_Barrier", "Espera");
+        System.out.println("GRAPH BAR: C1 espera barrera");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerReleasedBarrier() {
+        clearBarrierLinks();
+        addConnectionIfNotExists("R_Barrier", "C1", "Avanza");
+        addConnectionIfNotExists("R_Token", "C1", "Turno");
+        System.out.println("GRAPH BAR: C1 cruza barrera");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerIdleBarrier() {
+        clearBarrierLinks();
+        System.out.println("GRAPH BAR: C1 inactivo");
         SwingUtilities.invokeLater(this::repaint);
     }
 

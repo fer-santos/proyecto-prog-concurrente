@@ -24,6 +24,7 @@ public class WaterTankBarrierStrategy implements SynchronizationStrategy {
     // Mutex para proteger el acceso directo a panel.level
     // (Necesario porque la barrera no protege la modificación en sí)
     private final ReentrantLock levelLock = new ReentrantLock();
+    private static final long VISUALIZATION_DELAY = 420L;
 
     public WaterTankBarrierStrategy(WaterTankSim panel) {
         this.panel = panel;
@@ -35,63 +36,79 @@ public class WaterTankBarrierStrategy implements SynchronizationStrategy {
 
         // --- Hilo Productor ---
         producer = new Thread(() -> {
-            while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
-                try {
-                    // 1. Producir (simulado con sleep)
-                    Thread.sleep(180 + (int) (Math.random() * 220));
+            try {
+                while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
+                    panel.updateGraphProducerWorkingBarrier();
+                    Thread.sleep(VISUALIZATION_DELAY);
 
-                    // 2. Intentar agregar al tanque (protegido por lock)
-                    levelLock.lock();
+                    levelLock.lockInterruptibly();
+                    boolean locked = true;
                     try {
                         if (panel.level < WaterTankSim.SLOTS) {
                             panel.level++;
                         }
-                        // Si está lleno, simplemente no agrega
+                        Thread.sleep(VISUALIZATION_DELAY);
                     } finally {
-                        levelLock.unlock();
+                        if (locked) {
+                            levelLock.unlock();
+                            locked = false;
+                        }
                     }
 
-                    // 3. Esperar al consumidor en la barrera
+                    panel.updateGraphProducerWaitingBarrier();
+                    Thread.sleep(VISUALIZATION_DELAY);
                     barrier.await();
+                    panel.updateGraphProducerReleasedBarrier();
+                    Thread.sleep(VISUALIZATION_DELAY);
 
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt(); // Salir del bucle si se interrumpe
-                } catch (BrokenBarrierException e) {
-                    // La barrera se rompió (otro hilo fue interrumpido), salir
-                    Thread.currentThread().interrupt();
+                    panel.updateGraphProducerIdleBarrier();
+                    Thread.sleep(260 + (int) (Math.random() * 260));
                 }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (BrokenBarrierException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                panel.updateGraphProducerIdleBarrier();
             }
-        }, "Producer-Barrier");
+        }, "Producer-Barrier-Visual");
 
         // --- Hilo Consumidor ---
         consumer = new Thread(() -> {
-            while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
-                try {
-                    // 1. Intentar quitar del tanque (protegido por lock)
-                    levelLock.lock();
+            try {
+                while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
+                    levelLock.lockInterruptibly();
+                    boolean locked = true;
                     try {
                         if (panel.level > 0) {
                             panel.level--;
                         }
-                        // Si está vacío, simplemente no quita
+                        panel.updateGraphConsumerWorkingBarrier();
+                        Thread.sleep(VISUALIZATION_DELAY);
                     } finally {
-                        levelLock.unlock();
+                        if (locked) {
+                            levelLock.unlock();
+                            locked = false;
+                        }
                     }
 
-                    // 2. Consumir (simulado con sleep)
-                    Thread.sleep(180 + (int) (Math.random() * 220));
-
-                    // 3. Esperar al productor en la barrera
+                    Thread.sleep(VISUALIZATION_DELAY);
+                    panel.updateGraphConsumerWaitingBarrier();
                     barrier.await();
+                    panel.updateGraphConsumerReleasedBarrier();
+                    Thread.sleep(VISUALIZATION_DELAY);
 
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt(); // Salir del bucle si se interrumpe
-                } catch (BrokenBarrierException e) {
-                    // La barrera se rompió (otro hilo fue interrumpido), salir
-                    Thread.currentThread().interrupt();
+                    panel.updateGraphConsumerIdleBarrier();
+                    Thread.sleep(260 + (int) (Math.random() * 260));
                 }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (BrokenBarrierException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                panel.updateGraphConsumerIdleBarrier();
             }
-        }, "Consumer-Barrier");
+        }, "Consumer-Barrier-Visual");
 
         producer.setDaemon(true);
         consumer.setDaemon(true);
