@@ -345,6 +345,14 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeConnection("R_Token_Ph", philosopherLabel);
     }
 
+    private synchronized void clearSleepingBarberProcessLinks(String processLabel) {
+        if (processLabel == null) {
+            return;
+        }
+        removeConnection(processLabel, "R_Mutex_Barber");
+        removeConnection("R_Mutex_Barber", processLabel);
+    }
+
     private synchronized void addConnectionIfNotExists(String fromLabel, String toLabel, String kind) {
         /* ... código ... */
         if (fromLabel == null || toLabel == null || kind == null || data == null) {
@@ -1309,6 +1317,62 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         clearForkLink(philosopherLabel, leftFork);
         clearForkLink(philosopherLabel, rightFork);
         System.out.println("GRAPH PHILO BAR: " + philosopherLabel + " libera recursos");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    // --- Métodos específicos Barbero Dormilón Mutex ---
+    public synchronized void setupSleepingBarberGraph() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int resourceY = centerY - (int) (height * 0.22);
+        int processY = centerY + (int) (height * 0.22);
+        int offsetX = (int) (width * 0.28);
+        addNodeIfNotExists("Generator", NodeType.PROCESO, centerX - offsetX, processY);
+        addNodeIfNotExists("Barber", NodeType.PROCESO, centerX + offsetX, processY);
+        addNodeIfNotExists("R_Mutex_Barber", NodeType.RECURSO, centerX, resourceY);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showGeneratorRequestingLock_Barber() {
+        clearSleepingBarberProcessLinks("Generator");
+        addConnectionIfNotExists("Generator", "R_Mutex_Barber", "Solicitud");
+        System.out.println("GRAPH BARBER MUTEX: Generator solicita R_Mutex_Barber");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showGeneratorHoldingLock_Barber() {
+        clearSleepingBarberProcessLinks("Generator");
+        addConnectionIfNotExists("R_Mutex_Barber", "Generator", "Asignado");
+        System.out.println("GRAPH BARBER MUTEX: R_Mutex_Barber -> Generator");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showGeneratorReleasingLock_Barber() {
+        clearSleepingBarberProcessLinks("Generator");
+        System.out.println("GRAPH BARBER MUTEX: Generator libera R_Mutex_Barber");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberRequestingLock_Barber() {
+        clearSleepingBarberProcessLinks("Barber");
+        addConnectionIfNotExists("Barber", "R_Mutex_Barber", "Solicitud");
+        System.out.println("GRAPH BARBER MUTEX: Barber solicita R_Mutex_Barber");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberHoldingLock_Barber() {
+        clearSleepingBarberProcessLinks("Barber");
+        addConnectionIfNotExists("R_Mutex_Barber", "Barber", "Asignado");
+        System.out.println("GRAPH BARBER MUTEX: R_Mutex_Barber -> Barber");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberReleasingLock_Barber() {
+        clearSleepingBarberProcessLinks("Barber");
+        System.out.println("GRAPH BARBER MUTEX: Barber libera R_Mutex_Barber");
         SwingUtilities.invokeLater(this::repaint);
     }
 
