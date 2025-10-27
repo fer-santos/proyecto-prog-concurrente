@@ -10,6 +10,7 @@ public class WaterTankConditionStrategy implements SynchronizationStrategy {
     private Thread producer, consumer;
     private ReentrantLock mtxPC;
     private Condition notEmpty, notFull;
+    private static final long VISUALIZATION_DELAY = 420L;
 
     public WaterTankConditionStrategy(WaterTankSim panel) {
         this.panel = panel;
@@ -22,40 +23,98 @@ public class WaterTankConditionStrategy implements SynchronizationStrategy {
         notFull = mtxPC.newCondition();
 
         producer = new Thread(() -> {
-            while (panel.running.get()) {
-                try {
-                    mtxPC.lock();
+            try {
+                while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
+                    boolean locked = false;
+                    panel.updateGraphProducerWaitingLockCondition();
                     try {
+                        mtxPC.lockInterruptibly();
+                        locked = true;
+                        panel.updateGraphProducerHoldingLockCondition();
+                        Thread.sleep(VISUALIZATION_DELAY);
+
                         while (panel.level == WaterTankSim.SLOTS) {
-                            notFull.await(); // Espera si está lleno
+                            panel.updateGraphProducerWaitingNotFullCondition();
+                            Thread.sleep(VISUALIZATION_DELAY);
+                            notFull.await();
+                            panel.updateGraphProducerSignaledByNotFullCondition();
+                            Thread.sleep(VISUALIZATION_DELAY);
+                            panel.updateGraphProducerHoldingLockCondition();
+                            Thread.sleep(VISUALIZATION_DELAY);
                         }
-                        panel.level++;
-                        notEmpty.signal(); // Avisa que ya no está vacío
+
+                        panel.updateGraphProducerProducingCondition();
+                        if (panel.level < WaterTankSim.SLOTS) {
+                            panel.level++;
+                        }
+                        Thread.sleep(VISUALIZATION_DELAY);
+
+                        panel.updateGraphProducerSignalingNotEmptyCondition();
+                        notEmpty.signal();
+                        Thread.sleep(Math.max(120L, VISUALIZATION_DELAY / 2));
                     } finally {
-                        mtxPC.unlock();
+                        if (locked) {
+                            panel.updateGraphProducerReleasingLockCondition();
+                            mtxPC.unlock();
+                            locked = false;
+                        }
                     }
-                    Thread.sleep(180 + (int) (Math.random() * 220));
-                } catch (InterruptedException ignored) { return; }
+                    panel.updateGraphProducerIdleCondition();
+                    Thread.sleep(260 + (int) (Math.random() * 260));
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                panel.updateGraphProducerIdleCondition();
             }
-        }, "Producer-Condition"); // Nombre del Hilo cambiado
+        }, "Producer-Condition-Visual");
 
         consumer = new Thread(() -> {
-            while (panel.running.get()) {
-                try {
-                    mtxPC.lock();
+            try {
+                while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
+                    boolean locked = false;
+                    panel.updateGraphConsumerWaitingLockCondition();
                     try {
+                        mtxPC.lockInterruptibly();
+                        locked = true;
+                        panel.updateGraphConsumerHoldingLockCondition();
+                        Thread.sleep(VISUALIZATION_DELAY);
+
                         while (panel.level == 0) {
-                            notEmpty.await(); // Espera si está vacío
+                            panel.updateGraphConsumerWaitingNotEmptyCondition();
+                            Thread.sleep(VISUALIZATION_DELAY);
+                            notEmpty.await();
+                            panel.updateGraphConsumerSignaledByNotEmptyCondition();
+                            Thread.sleep(VISUALIZATION_DELAY);
+                            panel.updateGraphConsumerHoldingLockCondition();
+                            Thread.sleep(VISUALIZATION_DELAY);
                         }
-                        panel.level--;
-                        notFull.signal(); // Avisa que ya no está lleno
+
+                        panel.updateGraphConsumerConsumingCondition();
+                        if (panel.level > 0) {
+                            panel.level--;
+                        }
+                        Thread.sleep(VISUALIZATION_DELAY);
+
+                        panel.updateGraphConsumerSignalingNotFullCondition();
+                        notFull.signal();
+                        Thread.sleep(Math.max(120L, VISUALIZATION_DELAY / 2));
                     } finally {
-                        mtxPC.unlock();
+                        if (locked) {
+                            panel.updateGraphConsumerReleasingLockCondition();
+                            mtxPC.unlock();
+                            locked = false;
+                        }
                     }
-                    Thread.sleep(180 + (int) (Math.random() * 220));
-                } catch (InterruptedException ignored) { return; }
+                    panel.updateGraphConsumerIdleCondition();
+                    Thread.sleep(260 + (int) (Math.random() * 260));
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                panel.updateGraphConsumerIdleCondition();
             }
-        }, "Consumer-Condition"); // Nombre del Hilo cambiado
+        }, "Consumer-Condition-Visual");
 
         producer.setDaemon(true);
         consumer.setDaemon(true);

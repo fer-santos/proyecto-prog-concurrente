@@ -240,6 +240,20 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeConnection(labelB, labelA);
     }
 
+    private synchronized void clearProducerConditionLinks() {
+        removeBidirectional("P1", "R_Lock");
+        removeBidirectional("P1", "R_Buffer");
+        removeBidirectional("P1", "Cond_NotFull");
+        removeBidirectional("P1", "Cond_NotEmpty");
+    }
+
+    private synchronized void clearConsumerConditionLinks() {
+        removeBidirectional("C1", "R_Lock");
+        removeBidirectional("C1", "R_Buffer");
+        removeBidirectional("C1", "Cond_NotFull");
+        removeBidirectional("C1", "Cond_NotEmpty");
+    }
+
     private synchronized void addConnectionIfNotExists(String fromLabel, String toLabel, String kind) {
         /* ... código ... */
         if (fromLabel == null || toLabel == null || kind == null || data == null) {
@@ -488,6 +502,136 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     public synchronized void showConsumerIdleSemaphore() {
         removeConnectionsInvolving("C1");
         System.out.println("GRAPH SEM: C1 inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    // --- Métodos específicos P-C Variable Condición ---
+    public synchronized void setupProducerConsumerConditionGraph() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int topY = height / 5;
+        int midY = height / 2;
+        int condY = topY + height / 10;
+        int bottomY = (int) (height * 0.78);
+        addNodeIfNotExists("P1", NodeType.PROCESO, centerX - 220, midY);
+        addNodeIfNotExists("C1", NodeType.PROCESO, centerX + 220, midY);
+        addNodeIfNotExists("R_Lock", NodeType.RECURSO, centerX, topY);
+        addNodeIfNotExists("Cond_NotFull", NodeType.RECURSO, centerX - 160, condY);
+        addNodeIfNotExists("Cond_NotEmpty", NodeType.RECURSO, centerX + 160, condY);
+        addNodeIfNotExists("R_Buffer", NodeType.RECURSO, centerX, bottomY);
+    }
+
+    public synchronized void showProducerWaitingLockCondition() {
+        clearProducerConditionLinks();
+        addConnectionIfNotExists("P1", "R_Lock", "Espera");
+        System.out.println("GRAPH COND: P1 espera lock");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerHoldingLockCondition() {
+        clearProducerConditionLinks();
+        addConnectionIfNotExists("R_Lock", "P1", "Asignado");
+        System.out.println("GRAPH COND: R_Lock -> P1");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerWaitingNotFullCondition() {
+        clearProducerConditionLinks();
+        addConnectionIfNotExists("P1", "Cond_NotFull", "Espera");
+        System.out.println("GRAPH COND: P1 espera Cond_NotFull");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerSignaledByNotFullCondition() {
+        clearProducerConditionLinks();
+        addConnectionIfNotExists("Cond_NotFull", "P1", "Aviso");
+        System.out.println("GRAPH COND: Cond_NotFull -> P1");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerProducingCondition() {
+        clearProducerConditionLinks();
+        addConnectionIfNotExists("R_Lock", "P1", "Asignado");
+        addConnectionIfNotExists("P1", "R_Buffer", "Produce");
+        System.out.println("GRAPH COND: P1 produce");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerSignalingNotEmptyCondition() {
+        clearProducerConditionLinks();
+        addConnectionIfNotExists("R_Lock", "P1", "Asignado");
+        addConnectionIfNotExists("P1", "Cond_NotEmpty", "Senal");
+        System.out.println("GRAPH COND: P1 senaliza Cond_NotEmpty");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerReleasingLockCondition() {
+        clearProducerConditionLinks();
+        System.out.println("GRAPH COND: P1 libera lock");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerIdleCondition() {
+        clearProducerConditionLinks();
+        System.out.println("GRAPH COND: P1 inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerWaitingLockCondition() {
+        clearConsumerConditionLinks();
+        addConnectionIfNotExists("C1", "R_Lock", "Espera");
+        System.out.println("GRAPH COND: C1 espera lock");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerHoldingLockCondition() {
+        clearConsumerConditionLinks();
+        addConnectionIfNotExists("R_Lock", "C1", "Asignado");
+        System.out.println("GRAPH COND: R_Lock -> C1");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerWaitingNotEmptyCondition() {
+        clearConsumerConditionLinks();
+        addConnectionIfNotExists("C1", "Cond_NotEmpty", "Espera");
+        System.out.println("GRAPH COND: C1 espera Cond_NotEmpty");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerSignaledByNotEmptyCondition() {
+        clearConsumerConditionLinks();
+        addConnectionIfNotExists("Cond_NotEmpty", "C1", "Aviso");
+        System.out.println("GRAPH COND: Cond_NotEmpty -> C1");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerConsumingCondition() {
+        clearConsumerConditionLinks();
+        addConnectionIfNotExists("R_Lock", "C1", "Asignado");
+        addConnectionIfNotExists("C1", "R_Buffer", "Consume");
+        System.out.println("GRAPH COND: C1 consume");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerSignalingNotFullCondition() {
+        clearConsumerConditionLinks();
+        addConnectionIfNotExists("R_Lock", "C1", "Asignado");
+        addConnectionIfNotExists("C1", "Cond_NotFull", "Senal");
+        System.out.println("GRAPH COND: C1 senaliza Cond_NotFull");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerReleasingLockCondition() {
+        clearConsumerConditionLinks();
+        System.out.println("GRAPH COND: C1 libera lock");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerIdleCondition() {
+        clearConsumerConditionLinks();
+        System.out.println("GRAPH COND: C1 inactivo");
         SwingUtilities.invokeLater(this::repaint);
     }
 

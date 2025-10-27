@@ -83,6 +83,8 @@ public class WaterTankSim extends JPanel implements SimPanel {
                     drawingPanel.setupProducerConsumerGraph(); // Configura para Mutex
                 } else if (method == SyncMethod.SEMAPHORES) {
                     drawingPanel.setupProducerConsumerSemaphoreGraph();
+                } else if (method == SyncMethod.VAR_COND) {
+                    drawingPanel.setupProducerConsumerConditionGraph();
                 }
             });
         }
@@ -243,6 +245,102 @@ public class WaterTankSim extends JPanel implements SimPanel {
     public void updateGraphConsumerIdleSemaphore() {
         if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showConsumerIdleSemaphore());
+        }
+    }
+
+    public void updateGraphProducerWaitingLockCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerWaitingLockCondition());
+        }
+    }
+
+    public void updateGraphProducerHoldingLockCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerHoldingLockCondition());
+        }
+    }
+
+    public void updateGraphProducerWaitingNotFullCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerWaitingNotFullCondition());
+        }
+    }
+
+    public void updateGraphProducerSignaledByNotFullCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerSignaledByNotFullCondition());
+        }
+    }
+
+    public void updateGraphProducerProducingCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerProducingCondition());
+        }
+    }
+
+    public void updateGraphProducerSignalingNotEmptyCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerSignalingNotEmptyCondition());
+        }
+    }
+
+    public void updateGraphProducerReleasingLockCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerReleasingLockCondition());
+        }
+    }
+
+    public void updateGraphProducerIdleCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerIdleCondition());
+        }
+    }
+
+    public void updateGraphConsumerWaitingLockCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerWaitingLockCondition());
+        }
+    }
+
+    public void updateGraphConsumerHoldingLockCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerHoldingLockCondition());
+        }
+    }
+
+    public void updateGraphConsumerWaitingNotEmptyCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerWaitingNotEmptyCondition());
+        }
+    }
+
+    public void updateGraphConsumerSignaledByNotEmptyCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerSignaledByNotEmptyCondition());
+        }
+    }
+
+    public void updateGraphConsumerConsumingCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerConsumingCondition());
+        }
+    }
+
+    public void updateGraphConsumerSignalingNotFullCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerSignalingNotFullCondition());
+        }
+    }
+
+    public void updateGraphConsumerReleasingLockCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerReleasingLockCondition());
+        }
+    }
+
+    public void updateGraphConsumerIdleCondition() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerIdleCondition());
         }
     }
 
