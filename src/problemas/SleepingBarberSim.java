@@ -119,6 +119,8 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
                     drawingPanel.setupSleepingBarberGraph_Semaphore();
                 } else if (method == SyncMethod.VAR_COND) {
                     drawingPanel.setupSleepingBarberGraph_Condition();
+                } else if (method == SyncMethod.MONITORS) {
+                    drawingPanel.setupSleepingBarberGraph_Monitor();
                 }
                 // Añadiremos setups para otros métodos después
                 // else if (method == SyncMethod.SEMAPHORES) { ... }
@@ -360,6 +362,85 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
     public void updateGraphBarberIdleCondition() {
         if (drawingPanel != null && currentStrategy instanceof SleepingBarberConditionStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showBarberIdleCondition_Barber());
+        }
+    }
+
+    // --- NUEVOS MÉTODOS (Monitores) ---
+    public void updateGraphCustomerRequestingMonitor() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerRequestingMonitor_Barber());
+        }
+    }
+
+    public void updateGraphCustomerInsideMonitor() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerInsideMonitor_Barber());
+        }
+    }
+
+    public void updateGraphCustomerSeatedMonitor() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerSeatedMonitor_Barber());
+        }
+    }
+
+    public void updateGraphCustomerQueueFullMonitor() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerQueueFullMonitor_Barber());
+        }
+    }
+
+    public void updateGraphCustomerSignalingMonitor() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerSignalingMonitor_Barber());
+        }
+    }
+
+    public void updateGraphCustomerExitMonitor() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerExitMonitor_Barber());
+        }
+    }
+
+    public void updateGraphCustomerIdleMonitor() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerIdleMonitor_Barber());
+        }
+    }
+
+    public void updateGraphBarberRequestingMonitor() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberRequestingMonitor_Barber());
+        }
+    }
+
+    public void updateGraphBarberInsideMonitor() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberInsideMonitor_Barber());
+        }
+    }
+
+    public void updateGraphBarberWaitingMonitor() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberWaitingMonitor_Barber());
+        }
+    }
+
+    public void updateGraphBarberSignaledMonitor() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberSignaledMonitor_Barber());
+        }
+    }
+
+    public void updateGraphBarberExitMonitor() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberExitMonitor_Barber());
+        }
+    }
+
+    public void updateGraphBarberIdleMonitor() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberIdleMonitor_Barber());
         }
     }
     // Podríamos añadir más estados si quisiéramos refinar el grafo (ej. cliente->silla, barber->cliente)

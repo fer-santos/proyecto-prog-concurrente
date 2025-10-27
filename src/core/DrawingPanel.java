@@ -1630,6 +1630,126 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         SwingUtilities.invokeLater(this::repaint);
     }
 
+    public synchronized void setupSleepingBarberGraph_Monitor() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int offsetX = (int) (width * 0.28);
+        int processY = centerY + (int) (height * 0.24);
+        int monitorY = centerY - (int) (height * 0.22);
+        int condY = centerY;
+        int waitRoomY = centerY + (int) (height * 0.06);
+        addNodeIfNotExists("Customer", NodeType.PROCESO, centerX - offsetX, processY);
+        addNodeIfNotExists("Barber", NodeType.PROCESO, centerX + offsetX, processY);
+        addNodeIfNotExists("R_Monitor_SB", NodeType.RECURSO, centerX, monitorY);
+        addNodeIfNotExists("Cond_Customers_M", NodeType.RECURSO, centerX + (int) (width * 0.12), condY);
+        addNodeIfNotExists("R_WaitRoom", NodeType.RECURSO, centerX - (int) (width * 0.12), waitRoomY);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    private synchronized void clearSleepingBarberMonitorLinks(String processLabel) {
+        if (processLabel == null) {
+            return;
+        }
+        removeConnection(processLabel, "R_Monitor_SB");
+        removeConnection("R_Monitor_SB", processLabel);
+        removeConnection(processLabel, "Cond_Customers_M");
+        removeConnection("Cond_Customers_M", processLabel);
+        removeConnection(processLabel, "R_WaitRoom");
+        removeConnection("R_WaitRoom", processLabel);
+    }
+
+    public synchronized void showCustomerRequestingMonitor_Barber() {
+        clearSleepingBarberMonitorLinks("Customer");
+        addConnectionIfNotExists("Customer", "R_Monitor_SB", "Solicitud");
+        System.out.println("GRAPH BARBER MON: Customer solicita R_Monitor_SB");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerInsideMonitor_Barber() {
+        clearSleepingBarberMonitorLinks("Customer");
+        addConnectionIfNotExists("R_Monitor_SB", "Customer", "Dentro");
+        System.out.println("GRAPH BARBER MON: R_Monitor_SB -> Customer");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerSeatedMonitor_Barber() {
+        clearSleepingBarberMonitorLinks("Customer");
+        addConnectionIfNotExists("R_Monitor_SB", "Customer", "Dentro");
+        addConnectionIfNotExists("Customer", "R_WaitRoom", "Silla");
+        System.out.println("GRAPH BARBER MON: Customer ocupa silla");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerQueueFullMonitor_Barber() {
+        clearSleepingBarberMonitorLinks("Customer");
+        addConnectionIfNotExists("Customer", "R_WaitRoom", "Lleno");
+        System.out.println("GRAPH BARBER MON: Customer sin silla");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerSignalingMonitor_Barber() {
+        clearSleepingBarberMonitorLinks("Customer");
+        addConnectionIfNotExists("R_Monitor_SB", "Customer", "Dentro");
+        addConnectionIfNotExists("Customer", "Cond_Customers_M", "Signal");
+        System.out.println("GRAPH BARBER MON: Customer signal Cond_Customers_M");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerExitMonitor_Barber() {
+        clearSleepingBarberMonitorLinks("Customer");
+        System.out.println("GRAPH BARBER MON: Customer sale del monitor");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerIdleMonitor_Barber() {
+        clearSleepingBarberMonitorLinks("Customer");
+        System.out.println("GRAPH BARBER MON: Customer inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberRequestingMonitor_Barber() {
+        clearSleepingBarberMonitorLinks("Barber");
+        addConnectionIfNotExists("Barber", "R_Monitor_SB", "Solicitud");
+        System.out.println("GRAPH BARBER MON: Barber solicita R_Monitor_SB");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberInsideMonitor_Barber() {
+        clearSleepingBarberMonitorLinks("Barber");
+        addConnectionIfNotExists("R_Monitor_SB", "Barber", "Dentro");
+        System.out.println("GRAPH BARBER MON: R_Monitor_SB -> Barber");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberWaitingMonitor_Barber() {
+        clearSleepingBarberMonitorLinks("Barber");
+        addConnectionIfNotExists("Barber", "Cond_Customers_M", "Wait");
+        System.out.println("GRAPH BARBER MON: Barber espera Cond_Customers_M");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberSignaledMonitor_Barber() {
+        clearSleepingBarberMonitorLinks("Barber");
+        addConnectionIfNotExists("Cond_Customers_M", "Barber", "Signal");
+        System.out.println("GRAPH BARBER MON: Cond_Customers_M -> Barber");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberExitMonitor_Barber() {
+        clearSleepingBarberMonitorLinks("Barber");
+        System.out.println("GRAPH BARBER MON: Barber sale del monitor");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberIdleMonitor_Barber() {
+        clearSleepingBarberMonitorLinks("Barber");
+        System.out.println("GRAPH BARBER MON: Barber inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
     // --- Métodos de dibujo y listeners (sin cambios) ---
     private void drawNode(Graphics2D g2, ShapeNode n, boolean highlight) {
         /* ... código ... */
