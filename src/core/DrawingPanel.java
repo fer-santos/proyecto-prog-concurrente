@@ -353,6 +353,20 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeConnection("R_Mutex_Barber", processLabel);
     }
 
+    private synchronized void clearSleepingBarberSemaphoreLinks(String processLabel) {
+        if (processLabel == null) {
+            return;
+        }
+        removeConnection(processLabel, "S_AccessSeats");
+        removeConnection("S_AccessSeats", processLabel);
+        removeConnection(processLabel, "S_Customers");
+        removeConnection("S_Customers", processLabel);
+        removeConnection(processLabel, "S_Barber");
+        removeConnection("S_Barber", processLabel);
+        removeConnection(processLabel, "R_WaitRoom");
+        removeConnection("R_WaitRoom", processLabel);
+    }
+
     private synchronized void addConnectionIfNotExists(String fromLabel, String toLabel, String kind) {
         /* ... código ... */
         if (fromLabel == null || toLabel == null || kind == null || data == null) {
@@ -1373,6 +1387,126 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     public synchronized void showBarberReleasingLock_Barber() {
         clearSleepingBarberProcessLinks("Barber");
         System.out.println("GRAPH BARBER MUTEX: Barber libera R_Mutex_Barber");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void setupSleepingBarberGraph_Semaphore() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int offsetX = (int) (width * 0.28);
+        int processY = centerY + (int) (height * 0.24);
+        int upperY = centerY - (int) (height * 0.22);
+        int midOffsetX = (int) (width * 0.16);
+        addNodeIfNotExists("Customer", NodeType.PROCESO, centerX - offsetX, processY);
+        addNodeIfNotExists("Barber", NodeType.PROCESO, centerX + offsetX, processY);
+        addNodeIfNotExists("S_AccessSeats", NodeType.RECURSO, centerX, upperY);
+        addNodeIfNotExists("S_Customers", NodeType.RECURSO, centerX - midOffsetX, centerY);
+        addNodeIfNotExists("S_Barber", NodeType.RECURSO, centerX + midOffsetX, centerY);
+        addNodeIfNotExists("R_WaitRoom", NodeType.RECURSO, centerX, centerY + (int) (height * 0.05));
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerRequestingAccessSemaphore_Barber() {
+        clearSleepingBarberSemaphoreLinks("Customer");
+        addConnectionIfNotExists("Customer", "S_AccessSeats", "Espera");
+        System.out.println("GRAPH BARBER SEM: Customer espera S_AccessSeats");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerHoldingAccessSemaphore_Barber() {
+        clearSleepingBarberSemaphoreLinks("Customer");
+        addConnectionIfNotExists("S_AccessSeats", "Customer", "Permiso");
+        System.out.println("GRAPH BARBER SEM: S_AccessSeats -> Customer");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerReleasingAccessSemaphore_Barber() {
+        clearSleepingBarberSemaphoreLinks("Customer");
+        System.out.println("GRAPH BARBER SEM: Customer libera S_AccessSeats");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerQueueFullSemaphore_Barber() {
+        clearSleepingBarberSemaphoreLinks("Customer");
+        addConnectionIfNotExists("Customer", "R_WaitRoom", "Lleno");
+        System.out.println("GRAPH BARBER SEM: Customer sin asiento");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerSignalingCustomersSemaphore_Barber() {
+        clearSleepingBarberSemaphoreLinks("Customer");
+        addConnectionIfNotExists("Customer", "S_Customers", "Signal");
+        System.out.println("GRAPH BARBER SEM: Customer signal S_Customers");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerWaitingBarberSemaphore_Barber() {
+        clearSleepingBarberSemaphoreLinks("Customer");
+        addConnectionIfNotExists("Customer", "S_Barber", "Espera");
+        System.out.println("GRAPH BARBER SEM: Customer espera S_Barber");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerGrantedBarberSemaphore_Barber() {
+        clearSleepingBarberSemaphoreLinks("Customer");
+        addConnectionIfNotExists("S_Barber", "Customer", "Permiso");
+        System.out.println("GRAPH BARBER SEM: S_Barber -> Customer");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showCustomerIdleSemaphore_Barber() {
+        clearSleepingBarberSemaphoreLinks("Customer");
+        System.out.println("GRAPH BARBER SEM: Customer inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberWaitingCustomersSemaphore_Barber() {
+        clearSleepingBarberSemaphoreLinks("Barber");
+        addConnectionIfNotExists("Barber", "S_Customers", "Espera");
+        System.out.println("GRAPH BARBER SEM: Barber espera S_Customers");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberAcquiredCustomersSemaphore_Barber() {
+        clearSleepingBarberSemaphoreLinks("Barber");
+        addConnectionIfNotExists("S_Customers", "Barber", "Permiso");
+        System.out.println("GRAPH BARBER SEM: S_Customers -> Barber");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberRequestingAccessSemaphore_Barber() {
+        clearSleepingBarberSemaphoreLinks("Barber");
+        addConnectionIfNotExists("Barber", "S_AccessSeats", "Espera");
+        System.out.println("GRAPH BARBER SEM: Barber espera S_AccessSeats");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberHoldingAccessSemaphore_Barber() {
+        clearSleepingBarberSemaphoreLinks("Barber");
+        addConnectionIfNotExists("S_AccessSeats", "Barber", "Permiso");
+        System.out.println("GRAPH BARBER SEM: S_AccessSeats -> Barber");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberReleasingAccessSemaphore_Barber() {
+        clearSleepingBarberSemaphoreLinks("Barber");
+        System.out.println("GRAPH BARBER SEM: Barber libera S_AccessSeats");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberSignalingBarberSemaphore_Barber() {
+        clearSleepingBarberSemaphoreLinks("Barber");
+        addConnectionIfNotExists("Barber", "S_Barber", "Signal");
+        System.out.println("GRAPH BARBER SEM: Barber signal S_Barber");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberIdleSemaphore_Barber() {
+        clearSleepingBarberSemaphoreLinks("Barber");
+        System.out.println("GRAPH BARBER SEM: Barber inactivo");
         SwingUtilities.invokeLater(this::repaint);
     }
 

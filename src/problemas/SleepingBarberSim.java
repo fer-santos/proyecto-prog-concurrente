@@ -115,6 +115,8 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
                 if (method == SyncMethod.MUTEX) {
                     // Llama a un método específico para barbero (a crear en DrawingPanel)
                     drawingPanel.setupSleepingBarberGraph();
+                } else if (method == SyncMethod.SEMAPHORES) {
+                    drawingPanel.setupSleepingBarberGraph_Semaphore();
                 }
                 // Añadiremos setups para otros métodos después
                 // else if (method == SyncMethod.SEMAPHORES) { ... }
@@ -186,6 +188,97 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
     public void updateGraphBarberReleasingLock() {
         if (drawingPanel != null && currentStrategy instanceof SleepingBarberPureMutexStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showBarberReleasingLock_Barber());
+        }
+    }
+
+    // --- NUEVOS MÉTODOS (Semáforos) ---
+    public void updateGraphCustomerRequestingAccessSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerRequestingAccessSemaphore_Barber());
+        }
+    }
+
+    public void updateGraphCustomerHoldingAccessSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerHoldingAccessSemaphore_Barber());
+        }
+    }
+
+    public void updateGraphCustomerReleasingAccessSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerReleasingAccessSemaphore_Barber());
+        }
+    }
+
+    public void updateGraphCustomerQueueFullSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerQueueFullSemaphore_Barber());
+        }
+    }
+
+    public void updateGraphCustomerSignalingCustomersSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerSignalingCustomersSemaphore_Barber());
+        }
+    }
+
+    public void updateGraphCustomerWaitingBarberSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerWaitingBarberSemaphore_Barber());
+        }
+    }
+
+    public void updateGraphCustomerGrantedBarberSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerGrantedBarberSemaphore_Barber());
+        }
+    }
+
+    public void updateGraphCustomerIdleSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showCustomerIdleSemaphore_Barber());
+        }
+    }
+
+    public void updateGraphBarberWaitingCustomersSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberWaitingCustomersSemaphore_Barber());
+        }
+    }
+
+    public void updateGraphBarberAcquiredCustomersSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberAcquiredCustomersSemaphore_Barber());
+        }
+    }
+
+    public void updateGraphBarberRequestingAccessSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberRequestingAccessSemaphore_Barber());
+        }
+    }
+
+    public void updateGraphBarberHoldingAccessSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberHoldingAccessSemaphore_Barber());
+        }
+    }
+
+    public void updateGraphBarberReleasingAccessSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberReleasingAccessSemaphore_Barber());
+        }
+    }
+
+    public void updateGraphBarberSignalingBarberSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberSignalingBarberSemaphore_Barber());
+        }
+    }
+
+    public void updateGraphBarberIdleSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showBarberIdleSemaphore_Barber());
         }
     }
     // Podríamos añadir más estados si quisiéramos refinar el grafo (ej. cliente->silla, barber->cliente)
