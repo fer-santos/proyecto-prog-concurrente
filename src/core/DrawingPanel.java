@@ -277,6 +277,14 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeBidirectional("C1", "R_Token");
     }
 
+    private synchronized void clearPhilosopherMutexLinks(String philosopherLabel) {
+        if (philosopherLabel == null) {
+            return;
+        }
+        removeConnection(philosopherLabel, "R_Mutex");
+        removeConnection("R_Mutex", philosopherLabel);
+    }
+
     private synchronized void addConnectionIfNotExists(String fromLabel, String toLabel, String kind) {
         /* ... código ... */
         if (fromLabel == null || toLabel == null || kind == null || data == null) {
@@ -857,6 +865,45 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     public synchronized void showConsumerIdleBarrier() {
         clearBarrierLinks();
         System.out.println("GRAPH BAR: C1 inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    // --- Métodos específicos Filósofos Mutex ---
+    public synchronized void setupPhilosophersGraph_Mutex() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int radius = (int) (Math.min(width, height) * 0.32);
+        int philosophers = 5;
+        double step = 2 * Math.PI / philosophers;
+        for (int i = 0; i < philosophers; i++) {
+            double ang = -Math.PI / 2 + i * step;
+            int px = centerX + (int) Math.round(Math.cos(ang) * radius);
+            int py = centerY + (int) Math.round(Math.sin(ang) * radius);
+            addNodeIfNotExists("P" + i, NodeType.PROCESO, px, py);
+        }
+        addNodeIfNotExists("R_Mutex", NodeType.RECURSO, centerX, centerY);
+    }
+
+    public synchronized void showPhilosopherRequestingLock_Mutex(String philosopherLabel) {
+        clearPhilosopherMutexLinks(philosopherLabel);
+        addConnectionIfNotExists(philosopherLabel, "R_Mutex", "Solicitud");
+        System.out.println("GRAPH PHILO MUTEX: " + philosopherLabel + " solicita R_Mutex");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherHoldingLock_Mutex(String philosopherLabel) {
+        clearPhilosopherMutexLinks(philosopherLabel);
+        addConnectionIfNotExists("R_Mutex", philosopherLabel, "Asignado");
+        System.out.println("GRAPH PHILO MUTEX: R_Mutex -> " + philosopherLabel);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherReleasingLock_Mutex(String philosopherLabel) {
+        clearPhilosopherMutexLinks(philosopherLabel);
+        System.out.println("GRAPH PHILO MUTEX: " + philosopherLabel + " libera R_Mutex");
         SwingUtilities.invokeLater(this::repaint);
     }
 
