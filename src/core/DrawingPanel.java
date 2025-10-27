@@ -379,6 +379,18 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeConnection("R_WaitRoom", processLabel);
     }
 
+    private synchronized void clearSleepingBarberBarrierLinks(String processLabel) {
+        if (processLabel == null) {
+            return;
+        }
+        removeConnection(processLabel, "R_Barrier_SB");
+        removeConnection("R_Barrier_SB", processLabel);
+        removeConnection(processLabel, "R_Token_SB");
+        removeConnection("R_Token_SB", processLabel);
+        removeConnection(processLabel, "R_WaitRoom");
+        removeConnection("R_WaitRoom", processLabel);
+    }
+
     private synchronized void addConnectionIfNotExists(String fromLabel, String toLabel, String kind) {
         /* ... código ... */
         if (fromLabel == null || toLabel == null || kind == null || data == null) {
@@ -1747,6 +1759,81 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     public synchronized void showBarberIdleMonitor_Barber() {
         clearSleepingBarberMonitorLinks("Barber");
         System.out.println("GRAPH BARBER MON: Barber inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void setupSleepingBarberGraph_Barrier() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int offsetX = (int) (width * 0.28);
+        int processY = centerY + (int) (height * 0.24);
+        int barrierY = centerY - (int) (height * 0.22);
+        int tokenY = centerY;
+        int waitRoomY = centerY + (int) (height * 0.06);
+        addNodeIfNotExists("Generator", NodeType.PROCESO, centerX - offsetX, processY);
+        addNodeIfNotExists("Barber", NodeType.PROCESO, centerX + offsetX, processY);
+        addNodeIfNotExists("R_Barrier_SB", NodeType.RECURSO, centerX, barrierY);
+        addNodeIfNotExists("R_Token_SB", NodeType.RECURSO, centerX + (int) (width * 0.12), tokenY);
+        addNodeIfNotExists("R_WaitRoom", NodeType.RECURSO, centerX - (int) (width * 0.12), waitRoomY);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showGeneratorRequestingBarrier_Barber() {
+        clearSleepingBarberBarrierLinks("Generator");
+        addConnectionIfNotExists("Generator", "R_Barrier_SB", "Solicitud");
+        System.out.println("GRAPH BARBER BAR: Generator solicita R_Barrier_SB");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showGeneratorWaitingBarrier_Barber() {
+        clearSleepingBarberBarrierLinks("Generator");
+        addConnectionIfNotExists("Generator", "R_Barrier_SB", "Espera");
+        System.out.println("GRAPH BARBER BAR: Generator espera barrera");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showGeneratorReleasedBarrier_Barber() {
+        clearSleepingBarberBarrierLinks("Generator");
+        addConnectionIfNotExists("R_Barrier_SB", "Generator", "Cruza");
+        addConnectionIfNotExists("R_Token_SB", "Generator", "Turno");
+        System.out.println("GRAPH BARBER BAR: Generator cruza barrera");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showGeneratorFinishedCycle_Barber() {
+        clearSleepingBarberBarrierLinks("Generator");
+        System.out.println("GRAPH BARBER BAR: Generator ciclo listo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberRequestingBarrier_Barber() {
+        clearSleepingBarberBarrierLinks("Barber");
+        addConnectionIfNotExists("Barber", "R_Barrier_SB", "Solicitud");
+        System.out.println("GRAPH BARBER BAR: Barber solicita R_Barrier_SB");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberWaitingBarrier_Barber() {
+        clearSleepingBarberBarrierLinks("Barber");
+        addConnectionIfNotExists("Barber", "R_Barrier_SB", "Espera");
+        System.out.println("GRAPH BARBER BAR: Barber espera barrera");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberReleasedBarrier_Barber() {
+        clearSleepingBarberBarrierLinks("Barber");
+        addConnectionIfNotExists("R_Barrier_SB", "Barber", "Cruza");
+        addConnectionIfNotExists("R_Token_SB", "Barber", "Turno");
+        System.out.println("GRAPH BARBER BAR: Barber cruza barrera");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showBarberFinishedCycle_Barber() {
+        clearSleepingBarberBarrierLinks("Barber");
+        System.out.println("GRAPH BARBER BAR: Barber ciclo listo");
         SwingUtilities.invokeLater(this::repaint);
     }
 
