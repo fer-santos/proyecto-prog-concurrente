@@ -44,8 +44,8 @@ public class PhilosophersBarrierStrategy implements SynchronizationStrategy {
             threads[i] = new Thread(() -> {
                 final int leftFork = id;
                 final int rightFork = (id + 1) % PhilosophersSim.N;
-                boolean leftHeld = false;
-                boolean rightHeld = false;
+                boolean holdsLeft = false;
+                boolean holdsRight = false;
                 try {
                     while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
                         panel.state[id] = State.THINKING;
@@ -65,20 +65,33 @@ public class PhilosophersBarrierStrategy implements SynchronizationStrategy {
                         panel.updateGraphPhilosopherReleasedBarrier(id);
                         Thread.sleep(VISUALIZATION_DELAY);
 
-                        panel.updateGraphPhilosopherRequestingForkBarrier(id, leftFork);
+                        int firstFork = (id % 2 == 0) ? leftFork : rightFork;
+                        int secondFork = (id % 2 == 0) ? rightFork : leftFork;
+
+                        panel.updateGraphPhilosopherRequestingForkBarrier(id, firstFork);
                         Thread.sleep(VISUALIZATION_DELAY);
-                        forks[leftFork].acquire();
-                        leftHeld = true;
-                        panel.chopstickOwner[leftFork] = id;
-                        panel.updateGraphPhilosopherHoldingForkBarrier(id, leftFork);
+                        forks[firstFork].acquire();
+                        if (firstFork == leftFork) {
+                            holdsLeft = true;
+                            panel.chopstickOwner[leftFork] = id;
+                        } else {
+                            holdsRight = true;
+                            panel.chopstickOwner[rightFork] = id;
+                        }
+                        panel.updateGraphPhilosopherHoldingForkBarrier(id, firstFork);
                         Thread.sleep(VISUALIZATION_DELAY);
 
-                        panel.updateGraphPhilosopherRequestingForkBarrier(id, rightFork);
+                        panel.updateGraphPhilosopherRequestingForkBarrier(id, secondFork);
                         Thread.sleep(VISUALIZATION_DELAY);
-                        forks[rightFork].acquire();
-                        rightHeld = true;
-                        panel.chopstickOwner[rightFork] = id;
-                        panel.updateGraphPhilosopherHoldingForkBarrier(id, rightFork);
+                        forks[secondFork].acquire();
+                        if (secondFork == leftFork) {
+                            holdsLeft = true;
+                            panel.chopstickOwner[leftFork] = id;
+                        } else {
+                            holdsRight = true;
+                            panel.chopstickOwner[rightFork] = id;
+                        }
+                        panel.updateGraphPhilosopherHoldingForkBarrier(id, secondFork);
                         panel.state[id] = State.EATING;
                         panel.updateGraphPhilosopherEatingBarrier(id, leftFork, rightFork);
                         sleepRand(500, 900);
@@ -87,13 +100,13 @@ public class PhilosophersBarrierStrategy implements SynchronizationStrategy {
                         panel.chopstickOwner[rightFork] = -1;
                         panel.updateGraphPhilosopherReleasingBarrier(id, leftFork, rightFork);
                         Thread.sleep(VISUALIZATION_DELAY);
-                        if (rightHeld) {
+                        if (holdsRight) {
                             forks[rightFork].release();
-                            rightHeld = false;
+                            holdsRight = false;
                         }
-                        if (leftHeld) {
+                        if (holdsLeft) {
                             forks[leftFork].release();
-                            leftHeld = false;
+                            holdsLeft = false;
                         }
                         panel.state[id] = State.THINKING;
 
@@ -108,10 +121,10 @@ public class PhilosophersBarrierStrategy implements SynchronizationStrategy {
                 } catch (BrokenBarrierException e) {
                     Thread.currentThread().interrupt();
                 } finally {
-                    if (rightHeld) {
+                    if (holdsRight) {
                         forks[rightFork].release();
                     }
-                    if (leftHeld) {
+                    if (holdsLeft) {
                         forks[leftFork].release();
                     }
                     cleanupForks(id);
