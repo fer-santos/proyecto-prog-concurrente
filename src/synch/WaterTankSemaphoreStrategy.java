@@ -9,6 +9,7 @@ public class WaterTankSemaphoreStrategy implements SynchronizationStrategy {
     private Thread producer, consumer;
     private Semaphore semEmpty, semFull;
     private ReentrantLock semMutex;
+    private static final long VISUALIZATION_DELAY = 420L;
 
     public WaterTankSemaphoreStrategy(WaterTankSim panel) {
         this.panel = panel;
@@ -21,38 +22,86 @@ public class WaterTankSemaphoreStrategy implements SynchronizationStrategy {
         semMutex = new ReentrantLock(true);
 
         producer = new Thread(() -> {
-            while (panel.running.get()) {
-                try {
+            try {
+                while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
+                    panel.updateGraphProducerWaitingEmptySemaphore();
                     semEmpty.acquire();
-                    semMutex.lock();
+                    panel.updateGraphProducerAcquiredEmptySemaphore();
+                    Thread.sleep(VISUALIZATION_DELAY);
+
+                    panel.updateGraphProducerWaitingMutexSemaphore();
+                    boolean locked = false;
+                    semMutex.lockInterruptibly();
+                    locked = true;
                     try {
+                        panel.updateGraphProducerHoldingMutexSemaphore();
+                        Thread.sleep(VISUALIZATION_DELAY);
+
+                        panel.updateGraphProducerAccessingBufferSemaphore();
                         if (panel.level < WaterTankSim.SLOTS) {
                             panel.level++;
                         }
+                        Thread.sleep(VISUALIZATION_DELAY);
                     } finally {
-                        semMutex.unlock();
+                        if (locked) {
+                            panel.updateGraphProducerReleasingMutexSemaphore();
+                            semMutex.unlock();
+                            locked = false;
+                        }
                     }
+
+                    panel.updateGraphProducerSignalingFullSemaphore();
                     semFull.release();
-                    Thread.sleep(200 + (int) (Math.random() * 250));
-                } catch (InterruptedException ignored) { return; }
+                    Thread.sleep(Math.max(120L, VISUALIZATION_DELAY / 2));
+                    panel.updateGraphProducerIdleSemaphore();
+                    Thread.sleep(260 + (int) (Math.random() * 260));
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                panel.updateGraphProducerIdleSemaphore();
             }
         }, "Producer-Sem");
 
         consumer = new Thread(() -> {
-            while (panel.running.get()) {
-                try {
+            try {
+                while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
+                    panel.updateGraphConsumerWaitingFullSemaphore();
                     semFull.acquire();
-                    semMutex.lock();
+                    panel.updateGraphConsumerAcquiredFullSemaphore();
+                    Thread.sleep(VISUALIZATION_DELAY);
+
+                    panel.updateGraphConsumerWaitingMutexSemaphore();
+                    boolean locked = false;
+                    semMutex.lockInterruptibly();
+                    locked = true;
                     try {
+                        panel.updateGraphConsumerHoldingMutexSemaphore();
+                        Thread.sleep(VISUALIZATION_DELAY);
+
+                        panel.updateGraphConsumerAccessingBufferSemaphore();
                         if (panel.level > 0) {
                             panel.level--;
                         }
+                        Thread.sleep(VISUALIZATION_DELAY);
                     } finally {
-                        semMutex.unlock();
+                        if (locked) {
+                            panel.updateGraphConsumerReleasingMutexSemaphore();
+                            semMutex.unlock();
+                            locked = false;
+                        }
                     }
+
+                    panel.updateGraphConsumerSignalingEmptySemaphore();
                     semEmpty.release();
-                    Thread.sleep(200 + (int) (Math.random() * 250));
-                } catch (InterruptedException ignored) { return; }
+                    Thread.sleep(Math.max(120L, VISUALIZATION_DELAY / 2));
+                    panel.updateGraphConsumerIdleSemaphore();
+                    Thread.sleep(260 + (int) (Math.random() * 260));
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                panel.updateGraphConsumerIdleSemaphore();
             }
         }, "Consumer-Sem");
 

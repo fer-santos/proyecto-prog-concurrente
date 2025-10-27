@@ -81,14 +81,8 @@ public class WaterTankSim extends JPanel implements SimPanel {
             SwingUtilities.invokeLater(() -> {
                 if (method == SyncMethod.MUTEX) {
                     drawingPanel.setupProducerConsumerGraph(); // Configura para Mutex
-                } // Agregaremos setups para otros métodos después
-                // else if (method == SyncMethod.SEMAPHORES) { ... }
-                // else if (method == SyncMethod.VAR_COND) { drawingPanel.setupProducerConsumerGraph(); } // Podría usar el mismo
-                // else if (method == SyncMethod.MONITORS) { drawingPanel.setupProducerConsumerGraph(); } // Podría usar el mismo
-                // else if (method == SyncMethod.BARRIERS) { drawingPanel.setupProducerConsumerGraph(); } // Podría usar el mismo
-                else {
-                    // No hace falta clearGraph aquí si ya se llamó antes de entrar a startWith
-                    // drawingPanel.clearGraph(); 
+                } else if (method == SyncMethod.SEMAPHORES) {
+                    drawingPanel.setupProducerConsumerSemaphoreGraph();
                 }
             });
         }
@@ -153,6 +147,102 @@ public class WaterTankSim extends JPanel implements SimPanel {
     public void updateGraphConsumerRequestingMutex() {
         if (drawingPanel != null && currentStrategy instanceof WaterTankPureMutexStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showConsumerRequestingMutex());
+        }
+    }
+
+    public void updateGraphProducerWaitingEmptySemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerWaitingEmptySemaphore());
+        }
+    }
+
+    public void updateGraphProducerAcquiredEmptySemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerAcquiredEmptySemaphore());
+        }
+    }
+
+    public void updateGraphProducerWaitingMutexSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerWaitingMutexSemaphore());
+        }
+    }
+
+    public void updateGraphProducerHoldingMutexSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerHoldingMutexSemaphore());
+        }
+    }
+
+    public void updateGraphProducerAccessingBufferSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerAccessingBufferSemaphore());
+        }
+    }
+
+    public void updateGraphProducerReleasingMutexSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerReleasingMutexSemaphore());
+        }
+    }
+
+    public void updateGraphProducerSignalingFullSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerSignalingFullSemaphore());
+        }
+    }
+
+    public void updateGraphProducerIdleSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showProducerIdleSemaphore());
+        }
+    }
+
+    public void updateGraphConsumerWaitingFullSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerWaitingFullSemaphore());
+        }
+    }
+
+    public void updateGraphConsumerAcquiredFullSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerAcquiredFullSemaphore());
+        }
+    }
+
+    public void updateGraphConsumerWaitingMutexSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerWaitingMutexSemaphore());
+        }
+    }
+
+    public void updateGraphConsumerHoldingMutexSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerHoldingMutexSemaphore());
+        }
+    }
+
+    public void updateGraphConsumerAccessingBufferSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerAccessingBufferSemaphore());
+        }
+    }
+
+    public void updateGraphConsumerReleasingMutexSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerReleasingMutexSemaphore());
+        }
+    }
+
+    public void updateGraphConsumerSignalingEmptySemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerSignalingEmptySemaphore());
+        }
+    }
+
+    public void updateGraphConsumerIdleSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof WaterTankSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showConsumerIdleSemaphore());
         }
     }
 

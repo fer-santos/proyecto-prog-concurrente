@@ -235,6 +235,11 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         }
     }
 
+    private synchronized void removeBidirectional(String labelA, String labelB) {
+        removeConnection(labelA, labelB);
+        removeConnection(labelB, labelA);
+    }
+
     private synchronized void addConnectionIfNotExists(String fromLabel, String toLabel, String kind) {
         /* ... código ... */
         if (fromLabel == null || toLabel == null || kind == null || data == null) {
@@ -350,6 +355,139 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         String releaser = "C1";
         removeConnectionsInvolving(releaser);
         System.out.println("GRAPH: C1 libera R_Mutex. Connections: " + data.connections.size()); // LOGGING
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    // --- Métodos específicos P-C Semáforos ---
+    public synchronized void setupProducerConsumerSemaphoreGraph() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int topY = height / 5;
+        int midY = height / 2;
+        int bottomY = (int) (height * 0.78);
+        addNodeIfNotExists("P1", NodeType.PROCESO, centerX - 220, midY);
+        addNodeIfNotExists("C1", NodeType.PROCESO, centerX + 220, midY);
+        addNodeIfNotExists("S_Empty", NodeType.RECURSO, centerX - 150, topY);
+        addNodeIfNotExists("S_Mutex", NodeType.RECURSO, centerX, topY);
+        addNodeIfNotExists("S_Full", NodeType.RECURSO, centerX + 150, topY);
+        addNodeIfNotExists("R_Buffer", NodeType.RECURSO, centerX, bottomY);
+    }
+
+    public synchronized void showProducerWaitingEmptySemaphore() {
+        removeBidirectional("P1", "S_Mutex");
+        removeBidirectional("P1", "R_Buffer");
+        removeBidirectional("P1", "S_Full");
+        removeConnection("S_Empty", "P1");
+        addConnectionIfNotExists("P1", "S_Empty", "Espera");
+        System.out.println("GRAPH SEM: P1 espera S_Empty");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerAcquiredEmptySemaphore() {
+        removeConnection("P1", "S_Empty");
+        addConnectionIfNotExists("S_Empty", "P1", "Permiso");
+        System.out.println("GRAPH SEM: S_Empty -> P1");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerWaitingMutexSemaphore() {
+        removeConnection("S_Mutex", "P1");
+        removeBidirectional("P1", "R_Buffer");
+        addConnectionIfNotExists("P1", "S_Mutex", "Espera");
+        System.out.println("GRAPH SEM: P1 espera S_Mutex");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerHoldingMutexSemaphore() {
+        removeConnection("P1", "S_Mutex");
+        addConnectionIfNotExists("S_Mutex", "P1", "Permiso");
+        System.out.println("GRAPH SEM: S_Mutex -> P1");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerAccessingBufferSemaphore() {
+        removeConnection("S_Empty", "P1");
+        addConnectionIfNotExists("P1", "R_Buffer", "Produce");
+        System.out.println("GRAPH SEM: P1 produce en R_Buffer");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerReleasingMutexSemaphore() {
+        removeConnection("S_Mutex", "P1");
+        removeConnection("P1", "R_Buffer");
+        System.out.println("GRAPH SEM: P1 libera S_Mutex");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerSignalingFullSemaphore() {
+        addConnectionIfNotExists("P1", "S_Full", "Senal");
+        System.out.println("GRAPH SEM: P1 senaliza S_Full");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerIdleSemaphore() {
+        removeConnectionsInvolving("P1");
+        System.out.println("GRAPH SEM: P1 inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerWaitingFullSemaphore() {
+        removeBidirectional("C1", "S_Mutex");
+        removeBidirectional("C1", "R_Buffer");
+        removeBidirectional("C1", "S_Empty");
+        removeConnection("S_Full", "C1");
+        addConnectionIfNotExists("C1", "S_Full", "Espera");
+        System.out.println("GRAPH SEM: C1 espera S_Full");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerAcquiredFullSemaphore() {
+        removeConnection("C1", "S_Full");
+        addConnectionIfNotExists("S_Full", "C1", "Permiso");
+        System.out.println("GRAPH SEM: S_Full -> C1");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerWaitingMutexSemaphore() {
+        removeConnection("S_Mutex", "C1");
+        removeBidirectional("C1", "R_Buffer");
+        addConnectionIfNotExists("C1", "S_Mutex", "Espera");
+        System.out.println("GRAPH SEM: C1 espera S_Mutex");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerHoldingMutexSemaphore() {
+        removeConnection("C1", "S_Mutex");
+        addConnectionIfNotExists("S_Mutex", "C1", "Permiso");
+        System.out.println("GRAPH SEM: S_Mutex -> C1");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerAccessingBufferSemaphore() {
+        removeConnection("S_Full", "C1");
+        addConnectionIfNotExists("C1", "R_Buffer", "Consume");
+        System.out.println("GRAPH SEM: C1 consume de R_Buffer");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerReleasingMutexSemaphore() {
+        removeConnection("S_Mutex", "C1");
+        removeConnection("C1", "R_Buffer");
+        System.out.println("GRAPH SEM: C1 libera S_Mutex");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerSignalingEmptySemaphore() {
+        addConnectionIfNotExists("C1", "S_Empty", "Senal");
+        System.out.println("GRAPH SEM: C1 senaliza S_Empty");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerIdleSemaphore() {
+        removeConnectionsInvolving("C1");
+        System.out.println("GRAPH SEM: C1 inactivo");
         SwingUtilities.invokeLater(this::repaint);
     }
 
