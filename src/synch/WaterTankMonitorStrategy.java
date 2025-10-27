@@ -16,6 +16,7 @@ public class WaterTankMonitorStrategy implements SynchronizationStrategy {
     private ReentrantLock lock; // Mutex para exclusión
     private Condition notEmpty; // Condición para esperar si está vacío
     private Condition notFull;  // Condición para esperar si está lleno
+    private static final long VISUALIZATION_DELAY = 420L;
 
     public WaterTankMonitorStrategy(WaterTankSim panel) {
         this.panel = panel;
@@ -29,49 +30,99 @@ public class WaterTankMonitorStrategy implements SynchronizationStrategy {
 
         // --- Hilo Productor ---
         producer = new Thread(() -> {
-            while (panel.running.get()) {
-                try {
-                    lock.lock(); // Entra al monitor
+            try {
+                while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
+                    boolean locked = false;
+                    panel.updateGraphProducerWaitingMonitor();
                     try {
-                        // Espera mientras el tanque esté lleno
+                        lock.lockInterruptibly();
+                        locked = true;
+                        panel.updateGraphProducerInMonitor();
+                        Thread.sleep(VISUALIZATION_DELAY);
+
                         while (panel.level == WaterTankSim.SLOTS) {
-                            notFull.await(); // Equivalente a condition.wait
+                            panel.updateGraphProducerWaitingNotFullMonitor();
+                            Thread.sleep(VISUALIZATION_DELAY);
+                            notFull.await();
+                            panel.updateGraphProducerSignaledNotFullMonitor();
+                            Thread.sleep(VISUALIZATION_DELAY);
+                            panel.updateGraphProducerInMonitor();
+                            Thread.sleep(VISUALIZATION_DELAY);
                         }
-                        // Produce: incrementa el nivel
-                        panel.level++;
-                        // Avisa a un consumidor que podría estar esperando
-                        notEmpty.signal(); // Equivalente a condition.signal
+
+                        panel.updateGraphProducerProducingMonitor();
+                        if (panel.level < WaterTankSim.SLOTS) {
+                            panel.level++;
+                        }
+                        Thread.sleep(VISUALIZATION_DELAY);
+
+                        panel.updateGraphProducerSignalNotEmptyMonitor();
+                        notEmpty.signal();
+                        Thread.sleep(Math.max(120L, VISUALIZATION_DELAY / 2));
                     } finally {
-                        lock.unlock(); // Sale del monitor
+                        if (locked) {
+                            panel.updateGraphProducerExitMonitor();
+                            lock.unlock();
+                            locked = false;
+                        }
                     }
-                    // Simula tiempo de producción (fuera del monitor)
-                    Thread.sleep(180 + (int) (Math.random() * 220));
-                } catch (InterruptedException ignored) { return; }
+                    panel.updateGraphProducerIdleMonitor();
+                    Thread.sleep(260 + (int) (Math.random() * 260));
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                panel.updateGraphProducerIdleMonitor();
             }
-        }, "Producer-Monitor"); // Nombre del hilo
+        }, "Producer-Monitor-Visual");
 
         // --- Hilo Consumidor ---
         consumer = new Thread(() -> {
-            while (panel.running.get()) {
-                try {
-                    lock.lock(); // Entra al monitor
+            try {
+                while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
+                    boolean locked = false;
+                    panel.updateGraphConsumerWaitingMonitor();
                     try {
-                        // Espera mientras el tanque esté vacío
+                        lock.lockInterruptibly();
+                        locked = true;
+                        panel.updateGraphConsumerInMonitor();
+                        Thread.sleep(VISUALIZATION_DELAY);
+
                         while (panel.level == 0) {
-                            notEmpty.await(); // Equivalente a condition.wait
+                            panel.updateGraphConsumerWaitingNotEmptyMonitor();
+                            Thread.sleep(VISUALIZATION_DELAY);
+                            notEmpty.await();
+                            panel.updateGraphConsumerSignaledNotEmptyMonitor();
+                            Thread.sleep(VISUALIZATION_DELAY);
+                            panel.updateGraphConsumerInMonitor();
+                            Thread.sleep(VISUALIZATION_DELAY);
                         }
-                        // Consume: decrementa el nivel
-                        panel.level--;
-                        // Avisa a un productor que podría estar esperando
-                        notFull.signal(); // Equivalente a condition.signal
+
+                        panel.updateGraphConsumerConsumingMonitor();
+                        if (panel.level > 0) {
+                            panel.level--;
+                        }
+                        Thread.sleep(VISUALIZATION_DELAY);
+
+                        panel.updateGraphConsumerSignalNotFullMonitor();
+                        notFull.signal();
+                        Thread.sleep(Math.max(120L, VISUALIZATION_DELAY / 2));
                     } finally {
-                        lock.unlock(); // Sale del monitor
+                        if (locked) {
+                            panel.updateGraphConsumerExitMonitor();
+                            lock.unlock();
+                            locked = false;
+                        }
                     }
-                     // Simula tiempo de consumo (fuera del monitor)
-                    Thread.sleep(180 + (int) (Math.random() * 220));
-                } catch (InterruptedException ignored) { return; }
+                    panel.updateGraphConsumerIdleMonitor();
+                    Thread.sleep(260 + (int) (Math.random() * 260));
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                panel.updateGraphConsumerIdleMonitor();
             }
-        }, "Consumer-Monitor"); // Nombre del hilo
+        }, "Consumer-Monitor-Visual");
 
         producer.setDaemon(true);
         consumer.setDaemon(true);

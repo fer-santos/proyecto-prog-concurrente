@@ -254,6 +254,20 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeBidirectional("C1", "Cond_NotEmpty");
     }
 
+    private synchronized void clearProducerMonitorLinks() {
+        removeBidirectional("P1", "R_Monitor");
+        removeBidirectional("P1", "R_Buffer");
+        removeBidirectional("P1", "Cond_NotFull_M");
+        removeBidirectional("P1", "Cond_NotEmpty_M");
+    }
+
+    private synchronized void clearConsumerMonitorLinks() {
+        removeBidirectional("C1", "R_Monitor");
+        removeBidirectional("C1", "R_Buffer");
+        removeBidirectional("C1", "Cond_NotFull_M");
+        removeBidirectional("C1", "Cond_NotEmpty_M");
+    }
+
     private synchronized void addConnectionIfNotExists(String fromLabel, String toLabel, String kind) {
         /* ... código ... */
         if (fromLabel == null || toLabel == null || kind == null || data == null) {
@@ -632,6 +646,136 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     public synchronized void showConsumerIdleCondition() {
         clearConsumerConditionLinks();
         System.out.println("GRAPH COND: C1 inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    // --- Métodos específicos P-C Monitores ---
+    public synchronized void setupProducerConsumerMonitorGraph() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int topY = height / 5;
+        int midY = height / 2;
+        int condY = topY + height / 10;
+        int bottomY = (int) (height * 0.78);
+        addNodeIfNotExists("P1", NodeType.PROCESO, centerX - 220, midY);
+        addNodeIfNotExists("C1", NodeType.PROCESO, centerX + 220, midY);
+        addNodeIfNotExists("R_Monitor", NodeType.RECURSO, centerX, topY);
+        addNodeIfNotExists("Cond_NotFull_M", NodeType.RECURSO, centerX - 160, condY);
+        addNodeIfNotExists("Cond_NotEmpty_M", NodeType.RECURSO, centerX + 160, condY);
+        addNodeIfNotExists("R_Buffer", NodeType.RECURSO, centerX, bottomY);
+    }
+
+    public synchronized void showProducerWaitingMonitor() {
+        clearProducerMonitorLinks();
+        addConnectionIfNotExists("P1", "R_Monitor", "Espera");
+        System.out.println("GRAPH MON: P1 espera Monitor");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerInMonitor() {
+        clearProducerMonitorLinks();
+        addConnectionIfNotExists("R_Monitor", "P1", "Dentro");
+        System.out.println("GRAPH MON: Monitor -> P1");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerWaitingNotFullMonitor() {
+        clearProducerMonitorLinks();
+        addConnectionIfNotExists("P1", "Cond_NotFull_M", "Wait");
+        System.out.println("GRAPH MON: P1 espera Cond_NotFull_M");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerSignaledNotFullMonitor() {
+        clearProducerMonitorLinks();
+        addConnectionIfNotExists("Cond_NotFull_M", "P1", "Signal");
+        System.out.println("GRAPH MON: Cond_NotFull_M -> P1");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerProducingMonitor() {
+        clearProducerMonitorLinks();
+        addConnectionIfNotExists("R_Monitor", "P1", "Dentro");
+        addConnectionIfNotExists("P1", "R_Buffer", "Produce");
+        System.out.println("GRAPH MON: P1 produce");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerSignalNotEmptyMonitor() {
+        clearProducerMonitorLinks();
+        addConnectionIfNotExists("R_Monitor", "P1", "Dentro");
+        addConnectionIfNotExists("P1", "Cond_NotEmpty_M", "Signal");
+        System.out.println("GRAPH MON: P1 signal Cond_NotEmpty_M");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerExitMonitor() {
+        clearProducerMonitorLinks();
+        System.out.println("GRAPH MON: P1 sale Monitor");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showProducerIdleMonitor() {
+        clearProducerMonitorLinks();
+        System.out.println("GRAPH MON: P1 inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerWaitingMonitor() {
+        clearConsumerMonitorLinks();
+        addConnectionIfNotExists("C1", "R_Monitor", "Espera");
+        System.out.println("GRAPH MON: C1 espera Monitor");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerInMonitor() {
+        clearConsumerMonitorLinks();
+        addConnectionIfNotExists("R_Monitor", "C1", "Dentro");
+        System.out.println("GRAPH MON: Monitor -> C1");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerWaitingNotEmptyMonitor() {
+        clearConsumerMonitorLinks();
+        addConnectionIfNotExists("C1", "Cond_NotEmpty_M", "Wait");
+        System.out.println("GRAPH MON: C1 espera Cond_NotEmpty_M");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerSignaledNotEmptyMonitor() {
+        clearConsumerMonitorLinks();
+        addConnectionIfNotExists("Cond_NotEmpty_M", "C1", "Signal");
+        System.out.println("GRAPH MON: Cond_NotEmpty_M -> C1");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerConsumingMonitor() {
+        clearConsumerMonitorLinks();
+        addConnectionIfNotExists("R_Monitor", "C1", "Dentro");
+        addConnectionIfNotExists("C1", "R_Buffer", "Consume");
+        System.out.println("GRAPH MON: C1 consume");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerSignalNotFullMonitor() {
+        clearConsumerMonitorLinks();
+        addConnectionIfNotExists("R_Monitor", "C1", "Dentro");
+        addConnectionIfNotExists("C1", "Cond_NotFull_M", "Signal");
+        System.out.println("GRAPH MON: C1 signal Cond_NotFull_M");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerExitMonitor() {
+        clearConsumerMonitorLinks();
+        System.out.println("GRAPH MON: C1 sale Monitor");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showConsumerIdleMonitor() {
+        clearConsumerMonitorLinks();
+        System.out.println("GRAPH MON: C1 inactivo");
         SwingUtilities.invokeLater(this::repaint);
     }
 
