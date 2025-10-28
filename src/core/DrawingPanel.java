@@ -21,6 +21,7 @@ import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
+import org.jfree.chart.axis.ValueAxis;
 import javax.swing.Timer;
 import java.util.Random;
 
@@ -43,8 +44,12 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     private static final int RW_ROWS_PER_COLUMN = 5;
     private static final double CHART_HEIGHT_RATIO = 0.32;
     private static final int MIN_CHART_HEIGHT = 180;
-    private static final int CHART_MAX_POINTS = 200;
-    private static final double CHART_STEP = 0.25;
+    private static final int CHART_SCROLL_MAX_POINTS = 200;
+    private static final int CHART_ACORDEON_WARMUP = 60;
+    private static final double CHART_STEP = 0.30;
+    private static final int CHART_CARROUSEL_WINDOW_POINTS = 40;
+    private static final int CHART_CARROUSEL_HISTORY_POINTS = 420;
+    private static final double CHART_CARROUSEL_WINDOW_WIDTH = CHART_CARROUSEL_WINDOW_POINTS * CHART_STEP;
 
     public enum ChartKind {
         ACORDEON("Acordeón", Color.RED),
@@ -74,6 +79,15 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     private XYSeries dynamicSeries;
     private double chartXCursor = 0.0;
     private final Random chartRandom = new Random();
+    private JComponent chartComponent;
+    private JScrollPane chartScrollPane;
+    private JPanel chartWrapper;
+    private JComponent chartTitleContainer;
+    private JComponent chartLegendContainer;
+    private JLabel chartTitleLabel;
+    private JLabel chartLegendLabel;
+    private ValueAxis accordionDomainAxis;
+    private ValueAxis carouselDomainAxis;
 
     DrawingPanel() {
         // ... (código del constructor igual que antes) ...
@@ -310,23 +324,26 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     @Override
     public void doLayout() {
         super.doLayout();
-        if (chartPanel == null) {
+        JComponent component = (chartComponent != null) ? chartComponent : chartPanel;
+        if (component == null) {
             return;
         }
-        if (chartPanel.isVisible()) {
+        if (component.isVisible()) {
             int height = (int) Math.round(getHeight() * CHART_HEIGHT_RATIO);
             height = Math.max(MIN_CHART_HEIGHT, height);
             height = Math.min(height, Math.max(0, getHeight()));
             int y = getHeight() - height;
-            chartPanel.setBounds(0, Math.max(0, y), getWidth(), Math.max(0, height));
+            component.setBounds(0, Math.max(0, y), getWidth(), Math.max(0, height));
         } else {
-            chartPanel.setBounds(0, getHeight(), getWidth(), 0);
+            component.setBounds(0, getHeight(), getWidth(), 0);
         }
+        updateScrollPreferredSize();
     }
 
     private int getReservedChartHeight() {
-        if (chartPanel != null && chartPanel.isVisible()) {
-            int h = chartPanel.getHeight();
+        JComponent component = (chartComponent != null) ? chartComponent : chartPanel;
+        if (component != null && component.isVisible()) {
+            int h = component.getHeight();
             if (h <= 0) {
                 h = (int) Math.round(getHeight() * CHART_HEIGHT_RATIO);
             }
@@ -343,22 +360,69 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         }
         SwingUtilities.invokeLater(() -> {
             stopChartTimer();
+            if (chartComponent != null) {
+                remove(chartComponent);
+                chartComponent = null;
+            }
+            if (chartScrollPane != null) {
+                chartScrollPane = null;
+            }
+            chartWrapper = null;
+            chartTitleContainer = null;
+            chartLegendContainer = null;
+            chartTitleLabel = null;
+            chartLegendLabel = null;
+            accordionDomainAxis = null;
+            carouselDomainAxis = null;
+
             XYDataset dataset = buildDynamicDataset(kind);
             JFreeChart chart = buildSampleChart(kind, dataset);
-            if (chartPanel == null) {
-                chartPanel = new ChartPanel(chart);
-                chartPanel.setMouseWheelEnabled(false);
-                chartPanel.setPopupMenu(null);
-                chartPanel.setDomainZoomable(false);
-                chartPanel.setRangeZoomable(false);
-                chartPanel.setOpaque(true);
-                chartPanel.setBackground(Color.WHITE);
-                add(chartPanel);
+
+            chartPanel = new ChartPanel(chart);
+            chartPanel.setMouseWheelEnabled(false);
+            chartPanel.setPopupMenu(null);
+            chartPanel.setDomainZoomable(false);
+            chartPanel.setRangeZoomable(false);
+            chartPanel.setOpaque(true);
+            chartPanel.setBackground(Color.WHITE);
+
+            if (kind == ChartKind.SCROLL) {
+                chart.setTitle((String) null);
+                if (chart.getLegend() != null) {
+                    chart.removeLegend();
+                }
+                chartPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 18, 0));
+                chartScrollPane = new JScrollPane(chartPanel, ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
+                chartScrollPane.setBorder(BorderFactory.createEmptyBorder());
+                chartScrollPane.setOpaque(false);
+                chartScrollPane.getViewport().setOpaque(false);
+                chartScrollPane.getHorizontalScrollBar().setUnitIncrement(24);
+
+                chartWrapper = new JPanel(new BorderLayout());
+                chartWrapper.setOpaque(false);
+
+                chartTitleLabel = createTitleLabel(kind.getDisplayName());
+                chartLegendLabel = createLegendLabel(kind.getDisplayName(), kind.getLineColor());
+
+                chartTitleContainer = wrapLabel(chartTitleLabel, 8, 0, 4, 0);
+                chartLegendContainer = wrapLabel(chartLegendLabel, 8, 0, 10, 0);
+
+                chartWrapper.add(chartTitleContainer, BorderLayout.NORTH);
+                chartWrapper.add(chartScrollPane, BorderLayout.CENTER);
+                chartWrapper.add(chartLegendContainer, BorderLayout.SOUTH);
+                chartComponent = chartWrapper;
             } else {
-                chartPanel.setChart(chart);
+                chartPanel.setBorder(BorderFactory.createEmptyBorder());
+                chartPanel.setPreferredSize(null);
+                chartComponent = chartPanel;
             }
+
+            add(chartComponent);
             currentChartKind = kind;
-            chartPanel.setVisible(true);
+            chartComponent.setVisible(true);
+            updateAccordionAxisBounds();
+            updateCarouselAxisBounds();
+            updateScrollPreferredSize();
             startChartTimer(kind);
             revalidate();
             repaint();
@@ -366,13 +430,15 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     }
 
     public void hideChart() {
-        if (chartPanel == null) {
+        if (chartComponent == null) {
             return;
         }
         SwingUtilities.invokeLater(() -> {
             stopChartTimer();
-            chartPanel.setVisible(false);
+            chartComponent.setVisible(false);
             currentChartKind = null;
+            accordionDomainAxis = null;
+            carouselDomainAxis = null;
             revalidate();
             repaint();
         });
@@ -396,13 +462,33 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             renderer.setSeriesStroke(0, new BasicStroke(2.4f));
             renderer.setDefaultShapesVisible(false);
         }
+        if (kind == ChartKind.ACORDEON) {
+            accordionDomainAxis = plot.getDomainAxis();
+            accordionDomainAxis.setAutoRange(false);
+            accordionDomainAxis.setLowerMargin(0.02);
+            accordionDomainAxis.setUpperMargin(0.02);
+            carouselDomainAxis = null;
+        } else if (kind == ChartKind.CARROUSEL) {
+            carouselDomainAxis = plot.getDomainAxis();
+            carouselDomainAxis.setAutoRange(false);
+            carouselDomainAxis.setLowerMargin(0.02);
+            carouselDomainAxis.setUpperMargin(0.15);
+            accordionDomainAxis = null;
+        } else {
+            accordionDomainAxis = null;
+            carouselDomainAxis = null;
+        }
         return chart;
     }
 
     private XYDataset buildDynamicDataset(ChartKind kind) {
         dynamicSeries = new XYSeries(kind.getDisplayName());
         chartXCursor = 0.0;
-        int warmupPoints = 48;
+        int warmupPoints = switch (kind) {
+            case ACORDEON -> CHART_ACORDEON_WARMUP;
+            case SCROLL -> 48;
+            case CARROUSEL -> 24;
+        };
         for (int i = 0; i < warmupPoints; i++) {
             double x = i * CHART_STEP;
             double value = computeChartValue(kind, x);
@@ -423,9 +509,19 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             chartXCursor += CHART_STEP;
             double value = computeChartValue(kind, chartXCursor);
             dynamicSeries.add(chartXCursor, value);
-            while (dynamicSeries.getItemCount() > CHART_MAX_POINTS) {
-                dynamicSeries.remove(0);
+
+            if (kind == ChartKind.SCROLL) {
+                while (dynamicSeries.getItemCount() > CHART_SCROLL_MAX_POINTS) {
+                    dynamicSeries.remove(0);
+                }
+                updateScrollPreferredSize();
+            } else if (kind == ChartKind.CARROUSEL) {
+                while (dynamicSeries.getItemCount() > CHART_CARROUSEL_HISTORY_POINTS) {
+                    dynamicSeries.remove(0);
+                }
             }
+            updateAccordionAxisBounds();
+            updateCarouselAxisBounds();
         });
         chartTimer.start();
     }
@@ -446,6 +542,116 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         double noise = chartRandom.nextGaussian() * 0.35;
         double value = base + noise;
         return Math.max(0.1, value);
+    }
+
+    private JLabel createTitleLabel(String text) {
+        JLabel label = new JLabel(text, SwingConstants.CENTER);
+        label.setFont(label.getFont().deriveFont(Font.BOLD, 18f));
+        label.setBorder(BorderFactory.createEmptyBorder(6, 0, 4, 0));
+        label.setForeground(Color.DARK_GRAY);
+        return label;
+    }
+
+    private JLabel createLegendLabel(String text, Color color) {
+        JLabel label = new JLabel(text, SwingConstants.CENTER);
+        label.setFont(label.getFont().deriveFont(Font.PLAIN, 13f));
+        label.setBorder(BorderFactory.createEmptyBorder(4, 0, 6, 0));
+        label.setForeground(Color.DARK_GRAY);
+        label.setIcon(new LegendSwatchIcon(color));
+        label.setIconTextGap(8);
+        label.setHorizontalAlignment(SwingConstants.CENTER);
+        return label;
+    }
+
+    private JPanel wrapLabel(JLabel label, int top, int left, int bottom, int right) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+        panel.setBorder(BorderFactory.createEmptyBorder(top, left, bottom, right));
+        panel.add(label, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private static final class LegendSwatchIcon implements Icon {
+        private final Color color;
+        private static final int ICON_WIDTH = 28;
+        private static final int ICON_HEIGHT = 10;
+
+        LegendSwatchIcon(Color color) {
+            this.color = (color != null) ? color : Color.GRAY;
+        }
+
+        @Override
+        public void paintIcon(Component c, Graphics g, int x, int y) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int rectHeight = ICON_HEIGHT - 2;
+            int rectY = y + (getIconHeight() - rectHeight) / 2;
+            g2.setColor(color);
+            g2.fillRoundRect(x, rectY, ICON_WIDTH, rectHeight, 6, 6);
+            g2.setColor(color.darker());
+            g2.drawRoundRect(x, rectY, ICON_WIDTH, rectHeight, 6, 6);
+            g2.dispose();
+        }
+
+        @Override
+        public int getIconWidth() {
+            return ICON_WIDTH;
+        }
+
+        @Override
+        public int getIconHeight() {
+            return ICON_HEIGHT;
+        }
+    }
+
+    private void updateAccordionAxisBounds() {
+        if (currentChartKind != ChartKind.ACORDEON || accordionDomainAxis == null) {
+            return;
+        }
+        double min = 0.0;
+        double max = Math.max(chartXCursor, CHART_STEP);
+        if (dynamicSeries != null && dynamicSeries.getItemCount() > 0) {
+            min = Math.min(min, dynamicSeries.getMinX());
+            max = Math.max(max, dynamicSeries.getMaxX() + CHART_STEP);
+        }
+        if (max <= min) {
+            max = min + 1.0;
+        }
+        accordionDomainAxis.setLowerBound(min);
+        accordionDomainAxis.setUpperBound(max);
+    }
+
+    private void updateCarouselAxisBounds() {
+        if (currentChartKind != ChartKind.CARROUSEL || carouselDomainAxis == null) {
+            return;
+        }
+        double max = Math.max(chartXCursor, CHART_CARROUSEL_WINDOW_WIDTH);
+        if (dynamicSeries != null && dynamicSeries.getItemCount() > 0) {
+            max = Math.max(max, dynamicSeries.getMaxX());
+        }
+        double min = Math.max(0.0, max - CHART_CARROUSEL_WINDOW_WIDTH);
+        carouselDomainAxis.setLowerBound(min);
+        carouselDomainAxis.setUpperBound(max + CHART_STEP);
+    }
+
+    private void updateScrollPreferredSize() {
+        if (currentChartKind != ChartKind.SCROLL || chartPanel == null) {
+            return;
+        }
+        int viewportHeight = (int) Math.round(getHeight() * CHART_HEIGHT_RATIO);
+        int height = Math.max(MIN_CHART_HEIGHT, viewportHeight > 0 ? viewportHeight : MIN_CHART_HEIGHT);
+        int pointCount = (dynamicSeries != null) ? dynamicSeries.getItemCount() : 0;
+        int widthPerPoint = 14;
+        int minWidth = Math.max(getWidth(), 600);
+        int width = Math.max(minWidth, pointCount * widthPerPoint + 160);
+    int reservedTop = (chartTitleContainer != null) ? chartTitleContainer.getPreferredSize().height : 0;
+    int reservedBottom = (chartLegendContainer != null) ? chartLegendContainer.getPreferredSize().height : 0;
+        int availableHeight = Math.max(MIN_CHART_HEIGHT - 12, height - reservedTop - reservedBottom);
+        chartPanel.setPreferredSize(new Dimension(width, availableHeight));
+        chartPanel.revalidate();
+        if (chartScrollPane != null) {
+            chartScrollPane.revalidate();
+        }
     }
 
     private synchronized Optional<Integer> findNodeIdByLabel(String label) {
