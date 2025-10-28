@@ -369,9 +369,9 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     private JFreeChart buildSampleChart(ChartKind kind) {
         XYDataset dataset = buildSampleDataset(kind);
         JFreeChart chart = ChartFactory.createXYLineChart(
-                "Vista " + kind.getDisplayName(),
-                "Tiempo",
-                "Valor",
+                "" + kind.getDisplayName(),
+                "x",
+                "y",
                 dataset
         );
         chart.setBackgroundPaint(Color.WHITE);
