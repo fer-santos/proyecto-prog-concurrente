@@ -92,6 +92,15 @@ public class ReadersWritersMutexStrategy implements ReadersWritersStrategy {
     }
 
     private void handleReader(Actor actor) {
+        try {
+            processReader(actor);
+        } finally {
+            panel.updateGraphReaderFinishedMutex(actor.id);
+            sleepVisualization();
+        }
+    }
+
+    private void processReader(Actor actor) {
         boolean waitingIncremented = false;
         boolean activeIncremented = false;
         boolean locked = false;
@@ -145,6 +154,15 @@ public class ReadersWritersMutexStrategy implements ReadersWritersStrategy {
     }
 
     private void handleWriter(Actor actor) {
+        try {
+            processWriter(actor);
+        } finally {
+            panel.updateGraphWriterFinishedMutex(actor.id);
+            sleepVisualization();
+        }
+    }
+
+    private void processWriter(Actor actor) {
         boolean waitingIncremented = false;
         boolean writerActiveSet = false;
         boolean locked = false;

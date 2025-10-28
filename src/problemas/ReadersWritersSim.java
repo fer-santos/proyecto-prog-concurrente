@@ -133,6 +133,8 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
                 if (method == SyncMethod.MUTEX) {
                     // Llama a un método específico (a crear en DrawingPanel)
                     drawingPanel.setupReadersWritersGraph_Mutex();
+                } else if (method == SyncMethod.SEMAPHORES) {
+                    drawingPanel.setupReadersWritersGraph_Semaphore();
                 }
                 // Añadiremos setups para otros métodos después
                 // else if ...
@@ -213,6 +215,97 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
     public void updateGraphWriterReleasingLock(int actorId) {
         if (drawingPanel != null && currentStrategy instanceof ReadersWritersMutexStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showActorReleasingLock_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphReaderFinishedMutex(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMutexStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderFinishedMutex_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphWriterFinishedMutex(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMutexStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterFinishedMutex_RW("E" + actorId));
+        }
+    }
+
+    // --- Métodos para Semáforos ---
+    public void updateGraphReaderRequestingCountSemaphore(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderRequestingCountSemaphore_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderHoldingCountSemaphore(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderHoldingCountSemaphore_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderReleasingCountSemaphore(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderReleasingCountSemaphore_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderRequestingRwSemaphore(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderRequestingRwSemaphore_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderHoldingRwSemaphore(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderHoldingRwSemaphore_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderReleasingRwSemaphore(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderReleasingRwSemaphore_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderUsingDocumentSemaphore(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderUsingDocumentSemaphore_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderFinishedSemaphore(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderFinishedSemaphore_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphWriterRequestingSemaphore(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterRequestingSemaphore_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterHoldingSemaphore(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterHoldingSemaphore_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterUsingDocumentSemaphore(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterUsingDocumentSemaphore_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterReleasingSemaphore(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterReleasingSemaphore_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterFinishedSemaphore(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterFinishedSemaphore_RW("E" + actorId));
         }
     }
 

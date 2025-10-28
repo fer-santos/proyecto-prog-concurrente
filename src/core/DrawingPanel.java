@@ -8,7 +8,10 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.geom.Line2D;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.TreeSet;
 
 public class DrawingPanel extends JPanel implements MouseListener, MouseMotionListener {
 
@@ -21,6 +24,12 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     private Point createAt = new Point();
     private final JPopupMenu nodeMenu = new JPopupMenu();
     private ShapeNode nodeMenuTarget = null;
+    private final Map<String, Integer> readersWritersActorSlots = new HashMap<>();
+    private final TreeSet<Integer> readersAvailableSlots = new TreeSet<>();
+    private final TreeSet<Integer> writersAvailableSlots = new TreeSet<>();
+    private int nextReaderSlotIndex = 0;
+    private int nextWriterSlotIndex = 0;
+    private static final int RW_ROWS_PER_COLUMN = 5;
 
     DrawingPanel() {
         // ... (código del constructor igual que antes) ...
@@ -178,9 +187,74 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             nodeMenuTarget = null;
             dragging = null;
             hoveredTarget = null;
+            resetReadersWritersSlots();
         } else {
             data = new GraphData();
+            resetReadersWritersSlots();
         }
+    }
+
+    private synchronized void resetReadersWritersSlots() {
+        readersWritersActorSlots.clear();
+        readersAvailableSlots.clear();
+        writersAvailableSlots.clear();
+        nextReaderSlotIndex = 0;
+        nextWriterSlotIndex = 0;
+    }
+
+    private synchronized int allocateReadersWritersSlot(String actorLabel) {
+        if (actorLabel == null) {
+            return 0;
+        }
+        Integer existing = readersWritersActorSlots.get(actorLabel);
+        if (existing != null) {
+            return existing;
+        }
+        boolean isReader = actorLabel.startsWith("L");
+        TreeSet<Integer> pool = isReader ? readersAvailableSlots : writersAvailableSlots;
+        int slot;
+        if (!pool.isEmpty()) {
+            slot = pool.pollFirst();
+        } else if (isReader) {
+            slot = nextReaderSlotIndex;
+            nextReaderSlotIndex++;
+        } else {
+            slot = nextWriterSlotIndex;
+            nextWriterSlotIndex++;
+        }
+        readersWritersActorSlots.put(actorLabel, slot);
+        return slot;
+    }
+
+    private synchronized void releaseReadersWritersSlot(String actorLabel) {
+        if (actorLabel == null) {
+            return;
+        }
+        Integer slot = readersWritersActorSlots.remove(actorLabel);
+        if (slot == null) {
+            return;
+        }
+        if (actorLabel.startsWith("L")) {
+            readersAvailableSlots.add(slot);
+        } else {
+            writersAvailableSlots.add(slot);
+        }
+    }
+
+    private Point computeReadersWritersActorPosition(boolean isReader, int slot) {
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int baseX = isReader ? centerX - (int) (width * 0.28) : centerX + (int) (width * 0.28);
+        int startY = centerY - (int) (height * 0.06);
+        int spacingY = Math.max(48, (int) (height * 0.12));
+        int columnSpacing = Math.max(56, (int) (width * 0.06));
+        int row = Math.max(0, slot % RW_ROWS_PER_COLUMN);
+        int column = Math.max(0, slot / RW_ROWS_PER_COLUMN);
+        int nodeX = isReader ? baseX - column * columnSpacing : baseX + column * columnSpacing;
+        int nodeY = startY + row * spacingY;
+        return new Point(nodeX, nodeY);
     }
 
     private synchronized Optional<Integer> findNodeIdByLabel(String label) {
@@ -476,42 +550,33 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeConnection("R_Mutex_RW", actorLabel);
         removeConnection(actorLabel, "R_Document_RW");
         removeConnection("R_Document_RW", actorLabel);
+        removeConnection(actorLabel, "R_CountMutex_RW");
+        removeConnection("R_CountMutex_RW", actorLabel);
+        removeConnection(actorLabel, "S_RW_Semaphore");
+        removeConnection("S_RW_Semaphore", actorLabel);
     }
 
     private synchronized void ensureReadersWritersActorNode(String actorLabel) {
         if (actorLabel == null) {
             return;
         }
-        if (findNodeIdByLabel(actorLabel).isPresent()) {
+        boolean alreadyPresent = findNodeIdByLabel(actorLabel).isPresent();
+        boolean isReader = actorLabel.startsWith("L");
+        int slot = allocateReadersWritersSlot(actorLabel);
+        if (alreadyPresent) {
             return;
         }
-        boolean isReader = actorLabel.startsWith("L");
-        int width = getWidth() > 0 ? getWidth() : 600;
-        int height = getHeight() > 0 ? getHeight() : 400;
-        int centerX = width / 2;
-        int centerY = height / 2;
-        int baseX = isReader ? centerX - (int) (width * 0.28) : centerX + (int) (width * 0.28);
-        int startY = centerY - (int) (height * 0.06);
-        int spacingY = Math.max(48, (int) (height * 0.12));
-        int index = parseRwActorIndex(actorLabel);
-        int row = index % 6;
-        int column = index / 6;
-        int columnOffset = (int) (width * 0.06) * column;
-        int nodeX = isReader ? baseX - columnOffset : baseX + columnOffset;
-        int nodeY = startY + row * spacingY;
-        addNodeIfNotExists(actorLabel, NodeType.PROCESO, nodeX, nodeY);
+        Point position = computeReadersWritersActorPosition(isReader, slot);
+        addNodeIfNotExists(actorLabel, NodeType.PROCESO, position.x, position.y);
     }
 
-    private int parseRwActorIndex(String actorLabel) {
-        if (actorLabel == null || actorLabel.length() < 2) {
-            return 0;
+    private synchronized void removeReadersWritersActorNode(String actorLabel) {
+        if (actorLabel == null || data == null || data.nodes == null) {
+            return;
         }
-        try {
-            int value = Integer.parseInt(actorLabel.substring(1));
-            return Math.max(0, value - 1);
-        } catch (NumberFormatException e) {
-            return 0;
-        }
+        releaseReadersWritersSlot(actorLabel);
+        removeConnectionsInvolving(actorLabel);
+        data.nodes.removeIf(n -> n != null && actorLabel.equals(n.label));
     }
 
     private synchronized void clearSleepingBarberBarrierLinks(String processLabel) {
@@ -2011,6 +2076,131 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         ensureReadersWritersActorNode(actorLabel);
         clearReadersWritersActorLinks(actorLabel);
         System.out.println("GRAPH RW MUTEX: " + actorLabel + " libera mutex");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderFinishedMutex_RW(String actorLabel) {
+        removeReadersWritersActorNode(actorLabel);
+        System.out.println("GRAPH RW MUTEX: " + actorLabel + " se retira");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterFinishedMutex_RW(String actorLabel) {
+        removeReadersWritersActorNode(actorLabel);
+        System.out.println("GRAPH RW MUTEX: " + actorLabel + " se retira");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void setupReadersWritersGraph_Semaphore() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int countY = centerY - (int) (height * 0.26);
+        int semaphoreY = centerY - (int) (height * 0.08);
+        int documentY = centerY + (int) (height * 0.08);
+
+        addNodeIfNotExists("R_CountMutex_RW", NodeType.RECURSO, centerX - (int) (width * 0.18), countY);
+        addNodeIfNotExists("S_RW_Semaphore", NodeType.RECURSO, centerX + (int) (width * 0.18), semaphoreY);
+        addNodeIfNotExists("R_Document_RW", NodeType.RECURSO, centerX, documentY);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderRequestingCountSemaphore_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_CountMutex_RW", "Solicitud");
+        System.out.println("GRAPH RW SEM: " + actorLabel + " solicita R_CountMutex_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderHoldingCountSemaphore_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists("R_CountMutex_RW", actorLabel, "Asignado");
+        System.out.println("GRAPH RW SEM: " + actorLabel + " bloquea R_CountMutex_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderReleasingCountSemaphore_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        System.out.println("GRAPH RW SEM: " + actorLabel + " libera R_CountMutex_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderRequestingRwSemaphore_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "S_RW_Semaphore", "Solicitud");
+        System.out.println("GRAPH RW SEM: " + actorLabel + " solicita S_RW_Semaphore");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderHoldingRwSemaphore_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists("S_RW_Semaphore", actorLabel, "Asignado");
+        System.out.println("GRAPH RW SEM: " + actorLabel + " obtiene S_RW_Semaphore");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderReleasingRwSemaphore_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        System.out.println("GRAPH RW SEM: " + actorLabel + " libera S_RW_Semaphore");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderUsingDocumentSemaphore_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Document_RW", "Lee");
+        System.out.println("GRAPH RW SEM: " + actorLabel + " lee documento");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderFinishedSemaphore_RW(String actorLabel) {
+        removeReadersWritersActorNode(actorLabel);
+        System.out.println("GRAPH RW SEM: " + actorLabel + " finaliza");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterRequestingSemaphore_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "S_RW_Semaphore", "Solicitud");
+        System.out.println("GRAPH RW SEM: " + actorLabel + " solicita S_RW_Semaphore");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterHoldingSemaphore_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists("S_RW_Semaphore", actorLabel, "Asignado");
+        System.out.println("GRAPH RW SEM: " + actorLabel + " obtiene S_RW_Semaphore");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterUsingDocumentSemaphore_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Document_RW", "Escribe");
+        System.out.println("GRAPH RW SEM: " + actorLabel + " escribe documento");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterReleasingSemaphore_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        System.out.println("GRAPH RW SEM: " + actorLabel + " libera S_RW_Semaphore");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterFinishedSemaphore_RW(String actorLabel) {
+        removeReadersWritersActorNode(actorLabel);
+        System.out.println("GRAPH RW SEM: " + actorLabel + " finaliza");
         SwingUtilities.invokeLater(this::repaint);
     }
 
