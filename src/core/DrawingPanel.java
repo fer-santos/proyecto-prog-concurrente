@@ -430,6 +430,27 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeConnection("R_Table_Smokers", smokerLabel);
     }
 
+    private synchronized void clearSmokersMonitorAgentLinks() {
+        removeConnection("Agent", "R_Monitor_Smokers");
+        removeConnection("R_Monitor_Smokers", "Agent");
+        removeConnection("Agent", "Cond_Smokers_M");
+        removeConnection("Cond_Smokers_M", "Agent");
+        removeConnection("Agent", "R_Table_Smokers");
+        removeConnection("R_Table_Smokers", "Agent");
+    }
+
+    private synchronized void clearSmokersMonitorSmokerLinks(String smokerLabel) {
+        if (smokerLabel == null) {
+            return;
+        }
+        removeConnection(smokerLabel, "R_Monitor_Smokers");
+        removeConnection("R_Monitor_Smokers", smokerLabel);
+        removeConnection(smokerLabel, "Cond_Smokers_M");
+        removeConnection("Cond_Smokers_M", smokerLabel);
+        removeConnection(smokerLabel, "R_Table_Smokers");
+        removeConnection("R_Table_Smokers", smokerLabel);
+    }
+
     private synchronized void clearSleepingBarberBarrierLinks(String processLabel) {
         if (processLabel == null) {
             return;
@@ -1679,6 +1700,111 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         String nodeLabel = smokerNodeLabel(smokerId);
         clearSmokersConditionSmokerLinks(nodeLabel);
         System.out.println("GRAPH SMOKERS COND: " + nodeLabel + " inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void setupSmokersGraph_Monitor() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int monitorY = centerY - (int) (height * 0.2);
+        int condY = centerY;
+        int tableY = centerY + (int) (height * 0.08);
+        int smokersY = centerY + (int) (height * 0.26);
+        int smokerOffset = (int) (width * 0.28);
+
+        addNodeIfNotExists("Agent", NodeType.PROCESO, centerX, monitorY - (int) (height * 0.12));
+        addNodeIfNotExists("Smoker_Tabaco", NodeType.PROCESO, centerX - smokerOffset, smokersY);
+        addNodeIfNotExists("Smoker_Papel", NodeType.PROCESO, centerX, smokersY);
+        addNodeIfNotExists("Smoker_Cerillos", NodeType.PROCESO, centerX + smokerOffset, smokersY);
+        addNodeIfNotExists("R_Monitor_Smokers", NodeType.RECURSO, centerX - (int) (width * 0.2), monitorY);
+        addNodeIfNotExists("Cond_Smokers_M", NodeType.RECURSO, centerX + (int) (width * 0.2), condY);
+        addNodeIfNotExists("R_Table_Smokers", NodeType.RECURSO, centerX, tableY);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentRequestingMonitor_Smokers() {
+        clearSmokersMonitorAgentLinks();
+        addConnectionIfNotExists("Agent", "R_Monitor_Smokers", "Solicitud");
+        System.out.println("GRAPH SMOKERS MON: Agent solicita R_Monitor_Smokers");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentInsideMonitor_Smokers() {
+        clearSmokersMonitorAgentLinks();
+        addConnectionIfNotExists("R_Monitor_Smokers", "Agent", "Dentro");
+        System.out.println("GRAPH SMOKERS MON: Agent dentro del monitor");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentPlacingMonitor_Smokers(String ingredientsLabel) {
+        clearSmokersMonitorAgentLinks();
+        addConnectionIfNotExists("R_Monitor_Smokers", "Agent", "Dentro");
+        if (ingredientsLabel != null && !ingredientsLabel.isEmpty()) {
+            addConnectionIfNotExists("Agent", "R_Table_Smokers", ingredientsLabel);
+        }
+        System.out.println("GRAPH SMOKERS MON: Agent coloca " + (ingredientsLabel == null ? "" : ingredientsLabel));
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentSignalingMonitor_Smokers() {
+        clearSmokersMonitorAgentLinks();
+        addConnectionIfNotExists("R_Monitor_Smokers", "Agent", "Dentro");
+        addConnectionIfNotExists("Agent", "Cond_Smokers_M", "Signal");
+        System.out.println("GRAPH SMOKERS MON: Agent signal Cond_Smokers_M");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentIdleMonitor_Smokers() {
+        clearSmokersMonitorAgentLinks();
+        System.out.println("GRAPH SMOKERS MON: Agent inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerWaitingMonitor_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        clearSmokersMonitorSmokerLinks(nodeLabel);
+        addConnectionIfNotExists(nodeLabel, "Cond_Smokers_M", "Wait");
+        System.out.println("GRAPH SMOKERS MON: " + nodeLabel + " espera Cond_Smokers_M");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerInsideMonitor_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        clearSmokersMonitorSmokerLinks(nodeLabel);
+        addConnectionIfNotExists("R_Monitor_Smokers", nodeLabel, "Dentro");
+        System.out.println("GRAPH SMOKERS MON: " + nodeLabel + " dentro del monitor");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerTakingMonitor_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        clearSmokersMonitorSmokerLinks(nodeLabel);
+        addConnectionIfNotExists("R_Monitor_Smokers", nodeLabel, "Dentro");
+        addConnectionIfNotExists(nodeLabel, "R_Table_Smokers", "Toma");
+        System.out.println("GRAPH SMOKERS MON: " + nodeLabel + " toma ingredientes");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerExitMonitor_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        clearSmokersMonitorSmokerLinks(nodeLabel);
+        System.out.println("GRAPH SMOKERS MON: " + nodeLabel + " sale del monitor");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerSignalingMonitor_Smokers() {
+        addConnectionIfNotExists("Cond_Smokers_M", "Agent", "Signal");
+        System.out.println("GRAPH SMOKERS MON: Cond_Smokers_M -> Agent");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerIdleMonitor_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        clearSmokersMonitorSmokerLinks(nodeLabel);
+        System.out.println("GRAPH SMOKERS MON: " + nodeLabel + " inactivo");
         SwingUtilities.invokeLater(this::repaint);
     }
 
