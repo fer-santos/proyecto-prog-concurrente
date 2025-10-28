@@ -566,6 +566,10 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeConnection("Cond_Readers_RW_M", actorLabel);
         removeConnection(actorLabel, "Cond_Writers_RW_M");
         removeConnection("Cond_Writers_RW_M", actorLabel);
+            removeConnection(actorLabel, "R_Lock_RW_B");
+            removeConnection("R_Lock_RW_B", actorLabel);
+            removeConnection(actorLabel, "R_Barrier_RW");
+            removeConnection("R_Barrier_RW", actorLabel);
     }
 
     private synchronized void ensureReadersWritersActorNode(String actorLabel) {
@@ -2529,6 +2533,146 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     public synchronized void showWriterFinishedMonitor_RW(String actorLabel) {
         removeReadersWritersActorNode(actorLabel);
         System.out.println("GRAPH RW MON: " + actorLabel + " finaliza");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void setupReadersWritersGraph_Barrier() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int lockY = centerY - (int) (height * 0.26);
+        int barrierY = centerY - (int) (height * 0.06);
+        int documentY = centerY + (int) (height * 0.14);
+
+        addNodeIfNotExists("R_Lock_RW_B", NodeType.RECURSO, centerX, lockY);
+        addNodeIfNotExists("R_Barrier_RW", NodeType.RECURSO, centerX, barrierY);
+        addNodeIfNotExists("R_Document_RW", NodeType.RECURSO, centerX, documentY);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderRequestingBarrierLock_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Lock_RW_B", "Solicitud");
+        System.out.println("GRAPH RW BAR: " + actorLabel + " solicita R_Lock_RW_B");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderWaitingBarrierLock_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Lock_RW_B", "Espera");
+        System.out.println("GRAPH RW BAR: " + actorLabel + " espera R_Lock_RW_B");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderHoldingBarrierLock_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists("R_Lock_RW_B", actorLabel, "Asignado");
+        System.out.println("GRAPH RW BAR: " + actorLabel + " obtiene R_Lock_RW_B");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderUsingDocumentBarrier_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Document_RW", "Lee");
+        System.out.println("GRAPH RW BAR: " + actorLabel + " lee documento");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderReleasingBarrierLock_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Lock_RW_B", "Libera");
+        System.out.println("GRAPH RW BAR: " + actorLabel + " libera R_Lock_RW_B");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderWaitingBarrierGate_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Barrier_RW", "Espera");
+        System.out.println("GRAPH RW BAR: " + actorLabel + " espera R_Barrier_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderCrossingBarrierGate_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists("R_Barrier_RW", actorLabel, "Cruza");
+        System.out.println("GRAPH RW BAR: " + actorLabel + " cruza R_Barrier_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderFinishedBarrier_RW(String actorLabel) {
+        removeReadersWritersActorNode(actorLabel);
+        System.out.println("GRAPH RW BAR: " + actorLabel + " finaliza");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterRequestingBarrierLock_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Lock_RW_B", "Solicitud");
+        System.out.println("GRAPH RW BAR: " + actorLabel + " solicita R_Lock_RW_B");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterWaitingBarrierLock_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Lock_RW_B", "Espera");
+        System.out.println("GRAPH RW BAR: " + actorLabel + " espera R_Lock_RW_B");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterHoldingBarrierLock_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists("R_Lock_RW_B", actorLabel, "Asignado");
+        System.out.println("GRAPH RW BAR: " + actorLabel + " obtiene R_Lock_RW_B");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterUsingDocumentBarrier_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Document_RW", "Escribe");
+        System.out.println("GRAPH RW BAR: " + actorLabel + " escribe documento");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterReleasingBarrierLock_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Lock_RW_B", "Libera");
+        System.out.println("GRAPH RW BAR: " + actorLabel + " libera R_Lock_RW_B");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterWaitingBarrierGate_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Barrier_RW", "Espera");
+        System.out.println("GRAPH RW BAR: " + actorLabel + " espera R_Barrier_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterCrossingBarrierGate_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists("R_Barrier_RW", actorLabel, "Cruza");
+        System.out.println("GRAPH RW BAR: " + actorLabel + " cruza R_Barrier_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterFinishedBarrier_RW(String actorLabel) {
+        removeReadersWritersActorNode(actorLabel);
+        System.out.println("GRAPH RW BAR: " + actorLabel + " finaliza");
         SwingUtilities.invokeLater(this::repaint);
     }
 

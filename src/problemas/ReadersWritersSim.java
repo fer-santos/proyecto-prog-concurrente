@@ -139,6 +139,8 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
                     drawingPanel.setupReadersWritersGraph_Condition();
                 } else if (method == SyncMethod.MONITORS) {
                     drawingPanel.setupReadersWritersGraph_Monitor();
+                } else if (method == SyncMethod.BARRIERS) {
+                    drawingPanel.setupReadersWritersGraph_Barrier();
                 }
                 // Añadiremos setups para otros métodos después
                 // else if ...
@@ -528,6 +530,103 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
     public void updateGraphWriterFinishedMonitor(int actorId) {
         if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showWriterFinishedMonitor_RW("E" + actorId));
+        }
+    }
+
+    // --- Métodos para Barreras ---
+    public void updateGraphReaderRequestingBarrierLock(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderRequestingBarrierLock_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderWaitingBarrierLock(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderWaitingBarrierLock_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderHoldingBarrierLock(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderHoldingBarrierLock_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderUsingDocumentBarrier(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderUsingDocumentBarrier_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderReleasingBarrierLock(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderReleasingBarrierLock_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderWaitingBarrierGate(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderWaitingBarrierGate_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderCrossingBarrierGate(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderCrossingBarrierGate_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderFinishedBarrier(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderFinishedBarrier_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphWriterRequestingBarrierLock(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterRequestingBarrierLock_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterWaitingBarrierLock(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterWaitingBarrierLock_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterHoldingBarrierLock(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterHoldingBarrierLock_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterUsingDocumentBarrier(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterUsingDocumentBarrier_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterReleasingBarrierLock(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterReleasingBarrierLock_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterWaitingBarrierGate(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterWaitingBarrierGate_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterCrossingBarrierGate(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterCrossingBarrierGate_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterFinishedBarrier(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterFinishedBarrier_RW("E" + actorId));
         }
     }
 

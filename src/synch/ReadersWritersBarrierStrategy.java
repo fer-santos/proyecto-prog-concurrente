@@ -5,32 +5,28 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import problemas.ReadersWritersSim;
 import problemas.ReadersWritersSim.Actor;
 import problemas.ReadersWritersSim.Role;
 
-/**
- * Implementación "forzada" de Barreras para Lectores-Escritores. Utiliza
- * CyclicBarrier(2) para sincronizar el Spawner con UN actor que completa su
- * operación. *** ADVERTENCIA: Esto es muy ineficiente, limita severamente la
- * concurrencia y no es la forma natural de resolver el problema. Se necesita un
- * lock adicional para gestionar el acceso correcto de lectura/escritura. ***
- */
 public class ReadersWritersBarrierStrategy implements ReadersWritersStrategy {
+
+    private static final long VISUALIZATION_DELAY = 420L;
 
     private final ReadersWritersSim panel;
     private Thread spawner;
     private ExecutorService exec;
 
-    // Barrera para sincronizar Spawner y UN actor a la vez
-    private CyclicBarrier barrier;
+    private final ReentrantLock lock = new ReentrantLock(true);
+    private final Condition okToRead = lock.newCondition();
+    private final Condition okToWrite = lock.newCondition();
+    private volatile CyclicBarrier cycleBarrier;
 
-    // Lock para proteger el estado (readersActive, writerActive) y acceso
-    private final ReentrantLock accessLock = new ReentrantLock(true);
-    private int readersActive = 0;
-    private boolean writerActive = false;
-    // Contadores visuales (ya existen en el panel, los actualizaremos)
+    private int readersActive;
+    private boolean writerActive;
+    private int writersWaiting;
 
     public ReadersWritersBarrierStrategy(ReadersWritersSim panel) {
         this.panel = panel;
@@ -38,45 +34,22 @@ public class ReadersWritersBarrierStrategy implements ReadersWritersStrategy {
 
     @Override
     public void start() {
-        barrier = new CyclicBarrier(2); // Barrera para Spawner y 1 Actor
         readersActive = 0;
         writerActive = false;
-        panel.readersActive = 0; // Reset visual counters
+        writersWaiting = 0;
+        panel.readersActive = 0;
         panel.writerActive = false;
         panel.readersWaiting = 0;
         panel.writersWaiting = 0;
+        cycleBarrier = new CyclicBarrier(2);
 
         exec = Executors.newCachedThreadPool(r -> {
-            Thread t = new Thread(r);
+            Thread t = new Thread(r, "RW-Barrier-Actor");
             t.setDaemon(true);
             return t;
         });
 
-        // --- Hilo Spawner ---
-        spawner = new Thread(() -> {
-            while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
-                try {
-                    // 1. Intentar Spawmear si hay espacio
-                    if (panel.actors.size() < 20) {
-                        spawn(Math.random() < 0.7 ? Role.READER : Role.WRITER);
-                    } else {
-                        // Si no spawneó, dormir un poco para no ciclar tan rápido
-                        Thread.sleep(100);
-                    }
-
-                    // 2. Esperar a que UN actor termine su operación en la barrera
-                    barrier.await();
-
-                    // 3. Dormir antes de la siguiente ronda de spawn/espera
-                    Thread.sleep(400 + rnd(600));
-
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } catch (BrokenBarrierException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        }, "Spawner-Barrier");
+        spawner = new Thread(this::runSpawner, "RW-Barrier-Spawner");
         spawner.setDaemon(true);
         spawner.start();
     }
@@ -89,129 +62,316 @@ public class ReadersWritersBarrierStrategy implements ReadersWritersStrategy {
         if (exec != null) {
             exec.shutdownNow();
         }
-        // Resetear barrera si es necesario (aunque shutdownNow debería interrumpir await)
-        if (barrier != null && !barrier.isBroken()) {
+        lock.lock();
+        try {
+            okToRead.signalAll();
+            okToWrite.signalAll();
+        } finally {
+            lock.unlock();
+        }
+        CyclicBarrier barrier = cycleBarrier;
+        cycleBarrier = null;
+        if (barrier != null) {
             barrier.reset();
         }
     }
 
+    private void runSpawner() {
+        try {
+            while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
+                if (panel.actors.size() < 20) {
+                    spawn(Math.random() < 0.7 ? Role.READER : Role.WRITER);
+                }
+                if (!sleepRand(400, 1000)) {
+                    break;
+                }
+                awaitSpawnerBarrier();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private void awaitSpawnerBarrier() throws InterruptedException {
+        CyclicBarrier barrier = cycleBarrier;
+        if (barrier == null) {
+            return;
+        }
+        try {
+            barrier.await();
+        } catch (BrokenBarrierException e) {
+            resetCycleBarrier(barrier);
+        }
+    }
+
+    private void spawn(Role role) {
+        Actor actor = new Actor();
+        actor.role = role;
+        actor.color = (role == Role.READER) ? new Color(90, 160, 255) : new Color(230, 90, 90);
+        actor.id = panel.getNextActorId();
+        actor.x = (role == Role.READER) ? panel.getWidth() + 40 : -40;
+        actor.y = panel.getHeight() * 0.75 + (Math.random() * 40 - 20);
+        actor.tx = (role == Role.READER) ? panel.getWidth() - 80 : 80;
+        actor.ty = actor.y;
+        panel.actors.add(actor);
+    }
+
     @Override
-    public void requestAccess(Actor a) {
-        exec.submit(() -> {
-            boolean accessGranted = false;
-            panel.readersWaiting += (a.role == Role.READER ? 1 : 0);
-            panel.writersWaiting += (a.role == Role.WRITER ? 1 : 0);
+    public void requestAccess(Actor actor) {
+        if (exec == null || actor == null) {
+            return;
+        }
+        exec.submit(() -> handleActor(actor));
+    }
 
+    private void handleActor(Actor actor) {
+        if (actor.role == Role.READER) {
             try {
-                // --- Bucle de Intento de Acceso (similar a espera activa) ---
-                while (!accessGranted && panel.running.get() && !Thread.currentThread().isInterrupted()) {
-                    accessLock.lock();
-                    try {
-                        if (a.role == Role.READER) {
-                            if (!writerActive) { // Puede leer si no hay escritor
-                                readersActive++;
-                                panel.readersActive = readersActive;
-                                accessGranted = true;
-                                panel.readersWaiting--; // Deja de esperar visualmente
-
-                                // Mover actor a zona de lectura
-                                a.state = ReadersWritersSim.AState.READING;
-                                a.tx = panel.docCenter().x + (Math.random() * 80 - 40);
-                                a.ty = panel.docCenter().y + (Math.random() * 80 - 40);
-                            }
-                        } else { // WRITER
-                            if (readersActive == 0 && !writerActive) { // Puede escribir si no hay nadie
-                                writerActive = true;
-                                panel.writerActive = true;
-                                accessGranted = true;
-                                panel.writersWaiting--; // Deja de esperar visualmente
-
-                                // Mover actor a zona de escritura
-                                a.state = ReadersWritersSim.AState.WRITING;
-                                a.tx = panel.docCenter().x;
-                                a.ty = panel.docCenter().y;
-                            }
-                        }
-                    } finally {
-                        accessLock.unlock();
-                    }
-
-                    if (!accessGranted) {
-                        // Si no obtuvo acceso, dormir brevemente antes de reintentar
-                        Thread.sleep(50 + rnd(100));
-                    }
-                } // Fin del while de intento de acceso
-
-                // --- Sección Crítica Simulada (SI obtuvo acceso) ---
-                if (accessGranted) {
-                    if (a.role == Role.READER) {
-                        Thread.sleep(800 + rnd(700)); // Simula lectura
-                    } else {
-                        Thread.sleep(1000 + rnd(800)); // Simula escritura
-                    }
-                }
-
+                processReader(actor);
             } catch (InterruptedException e) {
-                // Si fue interrumpido, asegurarse de limpiar el estado si tenía acceso
-                Thread.currentThread().interrupt(); // Restaurar flag
-                accessGranted = false; // No considerarlo activo para el finally
+                Thread.currentThread().interrupt();
             } finally {
-                // --- Lógica de Salida y Barrera ---
-                boolean needsToAwait = false;
-                if (accessGranted) {
-                    accessLock.lock();
-                    try {
-                        if (a.role == Role.READER) {
-                            readersActive--;
-                            panel.readersActive = readersActive;
-                            a.state = ReadersWritersSim.AState.LEAVING;
-                            a.tx = panel.getWidth() + 40;
-                        } else { // WRITER
-                            writerActive = false;
-                            panel.writerActive = false;
-                            a.state = ReadersWritersSim.AState.LEAVING;
-                            a.tx = -40;
-                        }
-                        needsToAwait = true; // Solo espera en barrera si completó operación
-                    } finally {
-                        accessLock.unlock();
-                    }
+                panel.updateGraphReaderFinishedBarrier(actor.id);
+                sleepVisualization();
+            }
+        } else {
+            try {
+                processWriter(actor);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                panel.updateGraphWriterFinishedBarrier(actor.id);
+                sleepVisualization();
+            }
+        }
+    }
+
+    private void processReader(Actor actor) throws InterruptedException {
+        panel.updateGraphReaderRequestingBarrierLock(actor.id);
+        ensure(sleepVisualization());
+
+        lock.lockInterruptibly();
+        try {
+            while (writerActive || writersWaiting > 0) {
+                panel.readersWaiting++;
+                try {
+                    panel.updateGraphReaderWaitingBarrierLock(actor.id);
+                    ensure(sleepVisualization());
+                    okToRead.await();
+                } finally {
+                    panel.readersWaiting = Math.max(0, panel.readersWaiting - 1);
+                }
+            }
+            panel.updateGraphReaderHoldingBarrierLock(actor.id);
+            ensure(sleepVisualization());
+
+            readersActive++;
+            panel.readersActive = readersActive;
+
+            panel.updateGraphReaderReleasingBarrierLock(actor.id);
+            ensure(sleepVisualization());
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+
+        actor.state = ReadersWritersSim.AState.READING;
+        actor.tx = panel.docCenter().x + (Math.random() * 80 - 40);
+        actor.ty = panel.docCenter().y + (Math.random() * 80 - 40);
+        panel.updateGraphReaderUsingDocumentBarrier(actor.id);
+        ensure(sleepVisualization());
+        ensure(sleepRand(800, 1500));
+
+        actor.state = ReadersWritersSim.AState.LEAVING;
+        actor.tx = panel.getWidth() + 40;
+        actor.ty = actor.y;
+
+        panel.updateGraphReaderRequestingBarrierLock(actor.id);
+        ensure(sleepVisualization());
+
+        lock.lockInterruptibly();
+        try {
+            panel.updateGraphReaderHoldingBarrierLock(actor.id);
+            ensure(sleepVisualization());
+
+            readersActive = Math.max(0, readersActive - 1);
+            panel.readersActive = readersActive;
+
+            if (readersActive == 0) {
+                if (writersWaiting > 0) {
+                    okToWrite.signal();
                 } else {
-                    // Si nunca obtuvo acceso (o fue interrumpido antes), limpiar contadores visuales
-                    panel.readersWaiting -= (a.role == Role.READER ? 1 : 0);
-                    panel.writersWaiting -= (a.role == Role.WRITER ? 1 : 0);
-                    // Marcar como saliendo directamente
-                    if (a.state == ReadersWritersSim.AState.WAITING) { // Evitar mover si ya se estaba moviendo
-                        a.state = ReadersWritersSim.AState.LEAVING;
-                        a.tx = (a.role == Role.READER) ? panel.getWidth() + 40 : -40;
-                    }
+                    okToRead.signalAll();
                 }
+            }
 
-                // --- Esperar en la barrera SI completó la operación ---
-                if (needsToAwait) {
-                    try {
-                        barrier.await();
-                    } catch (InterruptedException | BrokenBarrierException e) {
-                        Thread.currentThread().interrupt(); // Salir si hay problemas
-                    }
-                }
-            } // Fin finally general
-        }); // Fin exec.submit
+            panel.updateGraphReaderReleasingBarrierLock(actor.id);
+            ensure(sleepVisualization());
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+
+        waitAtBarrier(actor.id, true);
     }
 
-    // --- Métodos Auxiliares ---
-    private void spawn(Role r) {
-        Actor a = new Actor();
-        a.role = r;
-        a.color = (r == Role.READER) ? new Color(90, 160, 255) : new Color(230, 90, 90);
-        a.x = (r == Role.READER) ? panel.getWidth() + 40 : -40;
-        a.y = panel.getHeight() * 0.75 + (Math.random() * 40 - 20);
-        a.tx = (r == Role.READER) ? panel.getWidth() - 80 : 80; // Target inicial (zona espera)
-        a.ty = a.y;
-        panel.actors.add(a);
+    private void processWriter(Actor actor) throws InterruptedException {
+        panel.updateGraphWriterRequestingBarrierLock(actor.id);
+        ensure(sleepVisualization());
+
+        lock.lockInterruptibly();
+        try {
+            while (readersActive > 0 || writerActive) {
+                writersWaiting++;
+                panel.writersWaiting = writersWaiting;
+                try {
+                    panel.updateGraphWriterWaitingBarrierLock(actor.id);
+                    ensure(sleepVisualization());
+                    okToWrite.await();
+                } finally {
+                    writersWaiting = Math.max(0, writersWaiting - 1);
+                    panel.writersWaiting = writersWaiting;
+                }
+            }
+            panel.updateGraphWriterHoldingBarrierLock(actor.id);
+            ensure(sleepVisualization());
+
+            writerActive = true;
+            panel.writerActive = true;
+
+            panel.updateGraphWriterReleasingBarrierLock(actor.id);
+            ensure(sleepVisualization());
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+
+        actor.state = ReadersWritersSim.AState.WRITING;
+        actor.tx = panel.docCenter().x;
+        actor.ty = panel.docCenter().y;
+        panel.updateGraphWriterUsingDocumentBarrier(actor.id);
+        ensure(sleepVisualization());
+        ensure(sleepRand(1000, 1800));
+
+        actor.state = ReadersWritersSim.AState.LEAVING;
+        actor.tx = -40;
+        actor.ty = actor.y;
+
+        panel.updateGraphWriterRequestingBarrierLock(actor.id);
+        ensure(sleepVisualization());
+
+        lock.lockInterruptibly();
+        try {
+            panel.updateGraphWriterHoldingBarrierLock(actor.id);
+            ensure(sleepVisualization());
+
+            writerActive = false;
+            panel.writerActive = false;
+
+            if (writersWaiting > 0) {
+                okToWrite.signal();
+            } else {
+                okToRead.signalAll();
+            }
+
+            panel.updateGraphWriterReleasingBarrierLock(actor.id);
+            ensure(sleepVisualization());
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+
+        waitAtBarrier(actor.id, false);
     }
 
-    private int rnd(int n) {
-        return (int) (Math.random() * n);
+    private void waitAtBarrier(int actorId, boolean isReader) throws InterruptedException {
+        if (isReader) {
+            panel.updateGraphReaderWaitingBarrierGate(actorId);
+        } else {
+            panel.updateGraphWriterWaitingBarrierGate(actorId);
+        }
+        ensure(sleepVisualization());
+
+        CyclicBarrier barrier = cycleBarrier;
+        if (barrier == null) {
+            if (isReader) {
+                panel.updateGraphReaderCrossingBarrierGate(actorId);
+            } else {
+                panel.updateGraphWriterCrossingBarrierGate(actorId);
+            }
+            ensure(sleepVisualization());
+            return;
+        }
+
+        try {
+            barrier.await();
+            if (isReader) {
+                panel.updateGraphReaderCrossingBarrierGate(actorId);
+            } else {
+                panel.updateGraphWriterCrossingBarrierGate(actorId);
+            }
+            ensure(sleepVisualization());
+        } catch (BrokenBarrierException e) {
+            resetCycleBarrier(barrier);
+            if (isReader) {
+                panel.updateGraphReaderCrossingBarrierGate(actorId);
+            } else {
+                panel.updateGraphWriterCrossingBarrierGate(actorId);
+            }
+            ensure(sleepVisualization());
+        }
+    }
+
+    private void resetCycleBarrier(CyclicBarrier broken) {
+        synchronized (this) {
+            if (cycleBarrier == broken) {
+                cycleBarrier = new CyclicBarrier(2);
+            }
+        }
+    }
+
+    private void ensure(boolean keepRunning) throws InterruptedException {
+        if (!keepRunning) {
+            throw new InterruptedException("Visualization interrupted");
+        }
+    }
+
+    private boolean sleepVisualization() {
+        if (!panel.running.get()) {
+            return false;
+        }
+        try {
+            Thread.sleep(VISUALIZATION_DELAY);
+            return panel.running.get() && !Thread.currentThread().isInterrupted();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private boolean sleepRand(int min, int max) {
+        if (!panel.running.get()) {
+            return false;
+        }
+        int span = Math.max(0, max - min);
+        int duration = min + rnd(span + 1);
+        try {
+            Thread.sleep(duration);
+            return panel.running.get() && !Thread.currentThread().isInterrupted();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private int rnd(int bound) {
+        if (bound <= 0) {
+            return 0;
+        }
+        return (int) (Math.random() * bound);
     }
 }
