@@ -135,6 +135,8 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
                     drawingPanel.setupReadersWritersGraph_Mutex();
                 } else if (method == SyncMethod.SEMAPHORES) {
                     drawingPanel.setupReadersWritersGraph_Semaphore();
+                } else if (method == SyncMethod.VAR_COND) {
+                    drawingPanel.setupReadersWritersGraph_Condition();
                 }
                 // Añadiremos setups para otros métodos después
                 // else if ...
@@ -306,6 +308,115 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
     public void updateGraphWriterFinishedSemaphore(int actorId) {
         if (drawingPanel != null && currentStrategy instanceof ReadersWritersSemaphoreStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showWriterFinishedSemaphore_RW("E" + actorId));
+        }
+    }
+
+    // --- Métodos para Variable de Condición ---
+    public void updateGraphReaderRequestingLockCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderRequestingLockCondition_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderHoldingLockCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderHoldingLockCondition_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderWaitingCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderWaitingCondition_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderSignaledCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderSignaledCondition_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderReleasingLockCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderReleasingLockCondition_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderUsingDocumentCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderUsingDocumentCondition_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderSignalingWriterCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderSignalingWriterCondition_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderSignalingReadersCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderSignalingReadersCondition_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderFinishedCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderFinishedCondition_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphWriterRequestingLockCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterRequestingLockCondition_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterHoldingLockCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterHoldingLockCondition_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterWaitingCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterWaitingCondition_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterSignaledCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterSignaledCondition_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterReleasingLockCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterReleasingLockCondition_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterUsingDocumentCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterUsingDocumentCondition_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterSignalingWriterCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterSignalingWriterCondition_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterSignalingReadersCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterSignalingReadersCondition_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterFinishedCondition(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterFinishedCondition_RW("E" + actorId));
         }
     }
 

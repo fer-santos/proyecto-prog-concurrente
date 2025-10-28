@@ -554,6 +554,12 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeConnection("R_CountMutex_RW", actorLabel);
         removeConnection(actorLabel, "S_RW_Semaphore");
         removeConnection("S_RW_Semaphore", actorLabel);
+        removeConnection(actorLabel, "R_Lock_RW");
+        removeConnection("R_Lock_RW", actorLabel);
+        removeConnection(actorLabel, "Cond_Readers_RW");
+        removeConnection("Cond_Readers_RW", actorLabel);
+        removeConnection(actorLabel, "Cond_Writers_RW");
+        removeConnection("Cond_Writers_RW", actorLabel);
     }
 
     private synchronized void ensureReadersWritersActorNode(String actorLabel) {
@@ -2201,6 +2207,164 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     public synchronized void showWriterFinishedSemaphore_RW(String actorLabel) {
         removeReadersWritersActorNode(actorLabel);
         System.out.println("GRAPH RW SEM: " + actorLabel + " finaliza");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void setupReadersWritersGraph_Condition() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int lockY = centerY - (int) (height * 0.26);
+        int conditionY = centerY - (int) (height * 0.08);
+        int documentY = centerY + (int) (height * 0.12);
+        int offsetX = (int) (width * 0.22);
+
+        addNodeIfNotExists("R_Lock_RW", NodeType.RECURSO, centerX, lockY);
+        addNodeIfNotExists("Cond_Readers_RW", NodeType.RECURSO, centerX - offsetX, conditionY);
+        addNodeIfNotExists("Cond_Writers_RW", NodeType.RECURSO, centerX + offsetX, conditionY);
+        addNodeIfNotExists("R_Document_RW", NodeType.RECURSO, centerX, documentY);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderRequestingLockCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Lock_RW", "Solicitud");
+        System.out.println("GRAPH RW COND: " + actorLabel + " solicita R_Lock_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderHoldingLockCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists("R_Lock_RW", actorLabel, "Asignado");
+        System.out.println("GRAPH RW COND: " + actorLabel + " obtiene R_Lock_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderWaitingCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "Cond_Readers_RW", "Espera");
+        System.out.println("GRAPH RW COND: " + actorLabel + " espera Cond_Readers_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderSignaledCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists("Cond_Readers_RW", actorLabel, "Señal");
+        System.out.println("GRAPH RW COND: " + actorLabel + " recibe señal Cond_Readers_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderReleasingLockCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Lock_RW", "Libera");
+        System.out.println("GRAPH RW COND: " + actorLabel + " libera R_Lock_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderUsingDocumentCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Document_RW", "Lee");
+        System.out.println("GRAPH RW COND: " + actorLabel + " lee documento");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderSignalingWriterCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "Cond_Writers_RW", "Señal");
+        System.out.println("GRAPH RW COND: " + actorLabel + " señala Cond_Writers_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderSignalingReadersCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "Cond_Readers_RW", "Señal");
+        System.out.println("GRAPH RW COND: " + actorLabel + " señala Cond_Readers_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showReaderFinishedCondition_RW(String actorLabel) {
+        removeReadersWritersActorNode(actorLabel);
+        System.out.println("GRAPH RW COND: " + actorLabel + " finaliza");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterRequestingLockCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Lock_RW", "Solicitud");
+        System.out.println("GRAPH RW COND: " + actorLabel + " solicita R_Lock_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterHoldingLockCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists("R_Lock_RW", actorLabel, "Asignado");
+        System.out.println("GRAPH RW COND: " + actorLabel + " obtiene R_Lock_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterWaitingCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "Cond_Writers_RW", "Espera");
+        System.out.println("GRAPH RW COND: " + actorLabel + " espera Cond_Writers_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterSignaledCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists("Cond_Writers_RW", actorLabel, "Señal");
+        System.out.println("GRAPH RW COND: " + actorLabel + " recibe señal Cond_Writers_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterReleasingLockCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Lock_RW", "Libera");
+        System.out.println("GRAPH RW COND: " + actorLabel + " libera R_Lock_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterUsingDocumentCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Document_RW", "Escribe");
+        System.out.println("GRAPH RW COND: " + actorLabel + " escribe documento");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterSignalingWriterCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "Cond_Writers_RW", "Señal");
+        System.out.println("GRAPH RW COND: " + actorLabel + " señala Cond_Writers_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterSignalingReadersCondition_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "Cond_Readers_RW", "Señal");
+        System.out.println("GRAPH RW COND: " + actorLabel + " señala Cond_Readers_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showWriterFinishedCondition_RW(String actorLabel) {
+        removeReadersWritersActorNode(actorLabel);
+        System.out.println("GRAPH RW COND: " + actorLabel + " finaliza");
         SwingUtilities.invokeLater(this::repaint);
     }
 
