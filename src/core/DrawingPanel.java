@@ -451,6 +451,23 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeConnection("R_Table_Smokers", smokerLabel);
     }
 
+    private synchronized void clearSmokersBarrierAgentLinks() {
+        removeConnection("Agent", "R_Table_Smokers");
+        removeConnection("R_Table_Smokers", "Agent");
+        removeConnection("Agent", "R_Barrier_Smokers");
+        removeConnection("R_Barrier_Smokers", "Agent");
+    }
+
+    private synchronized void clearSmokersBarrierSmokerLinks(String smokerLabel) {
+        if (smokerLabel == null) {
+            return;
+        }
+        removeConnection(smokerLabel, "R_Table_Smokers");
+        removeConnection("R_Table_Smokers", smokerLabel);
+        removeConnection(smokerLabel, "R_Barrier_Smokers");
+        removeConnection("R_Barrier_Smokers", smokerLabel);
+    }
+
     private synchronized void clearSleepingBarberBarrierLinks(String processLabel) {
         if (processLabel == null) {
             return;
@@ -1805,6 +1822,109 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         String nodeLabel = smokerNodeLabel(smokerId);
         clearSmokersMonitorSmokerLinks(nodeLabel);
         System.out.println("GRAPH SMOKERS MON: " + nodeLabel + " inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void setupSmokersGraph_Barrier() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int barrierY = centerY - (int) (height * 0.18);
+        int tableY = centerY + (int) (height * 0.02);
+        int smokersY = centerY + (int) (height * 0.26);
+        int smokerOffset = (int) (width * 0.28);
+
+        addNodeIfNotExists("Agent", NodeType.PROCESO, centerX, barrierY - (int) (height * 0.12));
+        addNodeIfNotExists("Smoker_Tabaco", NodeType.PROCESO, centerX - smokerOffset, smokersY);
+        addNodeIfNotExists("Smoker_Papel", NodeType.PROCESO, centerX, smokersY);
+        addNodeIfNotExists("Smoker_Cerillos", NodeType.PROCESO, centerX + smokerOffset, smokersY);
+        addNodeIfNotExists("R_Barrier_Smokers", NodeType.RECURSO, centerX - (int) (width * 0.2), barrierY);
+        addNodeIfNotExists("R_Table_Smokers", NodeType.RECURSO, centerX + (int) (width * 0.2), tableY);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentRequestingBarrier_Smokers() {
+        clearSmokersBarrierAgentLinks();
+        addConnectionIfNotExists("Agent", "R_Table_Smokers", "Solicitud");
+        System.out.println("GRAPH SMOKERS BAR: Agent solicita R_Table_Smokers");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentPlacingBarrier_Smokers(String ingredientsLabel) {
+        clearSmokersBarrierAgentLinks();
+        addConnectionIfNotExists("R_Table_Smokers", "Agent", "Coloca");
+        if (ingredientsLabel != null && !ingredientsLabel.isEmpty()) {
+            addConnectionIfNotExists("Agent", "R_Table_Smokers", ingredientsLabel);
+        }
+        System.out.println("GRAPH SMOKERS BAR: Agent coloca " + (ingredientsLabel == null ? "" : ingredientsLabel));
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentTableBusyBarrier_Smokers() {
+        clearSmokersBarrierAgentLinks();
+        addConnectionIfNotExists("Agent", "R_Table_Smokers", "Ocupada");
+        System.out.println("GRAPH SMOKERS BAR: Agent encuentra mesa ocupada");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentWaitingBarrier_Smokers() {
+        clearSmokersBarrierAgentLinks();
+        addConnectionIfNotExists("Agent", "R_Barrier_Smokers", "Espera");
+        System.out.println("GRAPH SMOKERS BAR: Agent espera barrera");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentReleasedBarrier_Smokers() {
+        clearSmokersBarrierAgentLinks();
+        addConnectionIfNotExists("R_Barrier_Smokers", "Agent", "Cruza");
+        System.out.println("GRAPH SMOKERS BAR: Agent cruza barrera");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentFinishedBarrier_Smokers() {
+        clearSmokersBarrierAgentLinks();
+        System.out.println("GRAPH SMOKERS BAR: Agent ciclo listo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerRequestingBarrier_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        clearSmokersBarrierSmokerLinks(nodeLabel);
+        addConnectionIfNotExists(nodeLabel, "R_Table_Smokers", "Solicitud");
+        System.out.println("GRAPH SMOKERS BAR: " + nodeLabel + " solicita mesa");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerTakingBarrier_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        clearSmokersBarrierSmokerLinks(nodeLabel);
+        addConnectionIfNotExists("R_Table_Smokers", nodeLabel, "Toma");
+        System.out.println("GRAPH SMOKERS BAR: " + nodeLabel + " toma ingredientes");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerWaitingBarrier_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        clearSmokersBarrierSmokerLinks(nodeLabel);
+        addConnectionIfNotExists(nodeLabel, "R_Barrier_Smokers", "Espera");
+        System.out.println("GRAPH SMOKERS BAR: " + nodeLabel + " espera barrera");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerReleasedBarrier_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        clearSmokersBarrierSmokerLinks(nodeLabel);
+        addConnectionIfNotExists("R_Barrier_Smokers", nodeLabel, "Cruza");
+        System.out.println("GRAPH SMOKERS BAR: " + nodeLabel + " cruza barrera");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerIdleBarrier_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        clearSmokersBarrierSmokerLinks(nodeLabel);
+        System.out.println("GRAPH SMOKERS BAR: " + nodeLabel + " inactivo");
         SwingUtilities.invokeLater(this::repaint);
     }
 

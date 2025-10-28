@@ -93,7 +93,6 @@ public class SmokersSim extends JPanel implements SimPanel {
         if (drawingPanel != null) {
             SwingUtilities.invokeLater(() -> {
                 if (method == SyncMethod.MUTEX) {
-                    // Llama a un método específico para fumadores (a crear en DrawingPanel)
                     drawingPanel.setupSmokersGraph();
                 } else if (method == SyncMethod.SEMAPHORES) {
                     drawingPanel.setupSmokersGraph_Semaphore();
@@ -101,6 +100,8 @@ public class SmokersSim extends JPanel implements SimPanel {
                     drawingPanel.setupSmokersGraph_Condition();
                 } else if (method == SyncMethod.MONITORS) {
                     drawingPanel.setupSmokersGraph_Monitor();
+                } else if (method == SyncMethod.BARRIERS) {
+                    drawingPanel.setupSmokersGraph_Barrier();
                 }
                 // Añadiremos setups para otros métodos después
                 // else if (method == SyncMethod.SEMAPHORES) { drawingPanel.setupSmokersSemaphoreGraph(); }
@@ -350,6 +351,74 @@ public class SmokersSim extends JPanel implements SimPanel {
     public void updateGraphSmokerIdleMonitor(int smokerId) {
         if (drawingPanel != null && currentStrategy instanceof SmokersMonitorStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showSmokerIdleMonitor_Smokers(smokerId));
+        }
+    }
+
+    // --- Métodos para Barreras ---
+    public void updateGraphAgentRequestingBarrier() {
+        if (drawingPanel != null && currentStrategy instanceof SmokersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentRequestingBarrier_Smokers());
+        }
+    }
+
+    public void updateGraphAgentPlacingBarrier(Ing ing1, Ing ing2) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersBarrierStrategy) {
+            String label = formatIngredientPair(ing1, ing2);
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentPlacingBarrier_Smokers(label));
+        }
+    }
+
+    public void updateGraphAgentTableBusyBarrier() {
+        if (drawingPanel != null && currentStrategy instanceof SmokersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentTableBusyBarrier_Smokers());
+        }
+    }
+
+    public void updateGraphAgentWaitingBarrier() {
+        if (drawingPanel != null && currentStrategy instanceof SmokersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentWaitingBarrier_Smokers());
+        }
+    }
+
+    public void updateGraphAgentReleasedBarrier() {
+        if (drawingPanel != null && currentStrategy instanceof SmokersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentReleasedBarrier_Smokers());
+        }
+    }
+
+    public void updateGraphAgentFinishedBarrier() {
+        if (drawingPanel != null && currentStrategy instanceof SmokersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentFinishedBarrier_Smokers());
+        }
+    }
+
+    public void updateGraphSmokerRequestingBarrier(int smokerId) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerRequestingBarrier_Smokers(smokerId));
+        }
+    }
+
+    public void updateGraphSmokerTakingBarrier(int smokerId) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerTakingBarrier_Smokers(smokerId));
+        }
+    }
+
+    public void updateGraphSmokerWaitingBarrier(int smokerId) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerWaitingBarrier_Smokers(smokerId));
+        }
+    }
+
+    public void updateGraphSmokerReleasedBarrier(int smokerId) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerReleasedBarrier_Smokers(smokerId));
+        }
+    }
+
+    public void updateGraphSmokerIdleBarrier(int smokerId) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersBarrierStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerIdleBarrier_Smokers(smokerId));
         }
     }
 
