@@ -389,6 +389,26 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeConnection("R_Table_Smokers", processLabel);
     }
 
+    private synchronized void clearSmokersSemaphoreAgentLinks() {
+        removeConnection("Agent", "S_Agent_Smokers");
+        removeConnection("S_Agent_Smokers", "Agent");
+        removeConnection("Agent", "R_Table_Smokers");
+        removeConnection("R_Table_Smokers", "Agent");
+        removeConnection("Agent", "S_Smoker_Tabaco");
+        removeConnection("Agent", "S_Smoker_Papel");
+        removeConnection("Agent", "S_Smoker_Cerillos");
+    }
+
+    private synchronized void clearSmokersSemaphoreSmokerLinks(String smokerLabel, String semaphoreLabel) {
+        if (smokerLabel == null || semaphoreLabel == null) {
+            return;
+        }
+        removeConnection(smokerLabel, semaphoreLabel);
+        removeConnection(semaphoreLabel, smokerLabel);
+        removeConnection(smokerLabel, "R_Table_Smokers");
+        removeConnection("R_Table_Smokers", smokerLabel);
+    }
+
     private synchronized void clearSleepingBarberBarrierLinks(String processLabel) {
         if (processLabel == null) {
             return;
@@ -1381,6 +1401,19 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         }
     }
 
+    private String smokerSemaphoreLabel(int smokerId) {
+        switch (smokerId) {
+            case 0:
+                return "S_Smoker_Tabaco";
+            case 1:
+                return "S_Smoker_Papel";
+            case 2:
+                return "S_Smoker_Cerillos";
+            default:
+                return "S_Smoker_" + smokerId;
+        }
+    }
+
     public synchronized void setupSmokersGraph() {
         clearGraphInternal();
         int width = getWidth() > 0 ? getWidth() : 600;
@@ -1399,6 +1432,32 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         addNodeIfNotExists("Smoker_Cerillos", NodeType.PROCESO, centerX + offsetSmoker, smokersY);
         addNodeIfNotExists("R_Mutex_Smokers", NodeType.RECURSO, mutexX, centerY);
         addNodeIfNotExists("R_Table_Smokers", NodeType.RECURSO, tableX, centerY);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void setupSmokersGraph_Semaphore() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int agentY = centerY - (int) (height * 0.24);
+        int smokersY = centerY + (int) (height * 0.26);
+        int agentSemX = centerX - (int) (width * 0.22);
+        int tableX = centerX;
+        int semRowY = centerY;
+        int smokerOffset = (int) (width * 0.28);
+        int semOffsetX = (int) (width * 0.18);
+
+        addNodeIfNotExists("Agent", NodeType.PROCESO, centerX, agentY);
+        addNodeIfNotExists("Smoker_Tabaco", NodeType.PROCESO, centerX - smokerOffset, smokersY);
+        addNodeIfNotExists("Smoker_Papel", NodeType.PROCESO, centerX, smokersY);
+        addNodeIfNotExists("Smoker_Cerillos", NodeType.PROCESO, centerX + smokerOffset, smokersY);
+        addNodeIfNotExists("S_Agent_Smokers", NodeType.RECURSO, agentSemX, semRowY);
+        addNodeIfNotExists("R_Table_Smokers", NodeType.RECURSO, tableX, semRowY);
+        addNodeIfNotExists("S_Smoker_Tabaco", NodeType.RECURSO, centerX - semOffsetX, semRowY + (int) (height * 0.08));
+        addNodeIfNotExists("S_Smoker_Papel", NodeType.RECURSO, centerX, semRowY + (int) (height * 0.08));
+        addNodeIfNotExists("S_Smoker_Cerillos", NodeType.RECURSO, centerX + semOffsetX, semRowY + (int) (height * 0.08));
         SwingUtilities.invokeLater(this::repaint);
     }
 
@@ -1446,6 +1505,76 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         String label = smokerNodeLabel(smokerId);
         clearSmokersMutexLinks(label);
         System.out.println("GRAPH SMOKERS MUTEX: " + label + " libera R_Mutex_Smokers");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentWaitingSemaphore_Smokers() {
+        clearSmokersSemaphoreAgentLinks();
+        addConnectionIfNotExists("Agent", "S_Agent_Smokers", "Espera");
+        System.out.println("GRAPH SMOKERS SEM: Agent espera S_Agent_Smokers");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentHoldingSemaphore_Smokers(String ingredientsLabel) {
+        clearSmokersSemaphoreAgentLinks();
+        addConnectionIfNotExists("S_Agent_Smokers", "Agent", "Permiso");
+        if (ingredientsLabel != null && !ingredientsLabel.isEmpty()) {
+            addConnectionIfNotExists("Agent", "R_Table_Smokers", ingredientsLabel);
+        }
+        System.out.println("GRAPH SMOKERS SEM: Agent coloca " + (ingredientsLabel == null ? "" : ingredientsLabel));
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentSignalingSemaphore_Smokers(int smokerId, String ingredientsLabel) {
+        clearSmokersSemaphoreAgentLinks();
+        addConnectionIfNotExists("S_Agent_Smokers", "Agent", "Permiso");
+        if (ingredientsLabel != null && !ingredientsLabel.isEmpty()) {
+            addConnectionIfNotExists("Agent", "R_Table_Smokers", ingredientsLabel);
+        }
+        String semaphoreLabel = smokerSemaphoreLabel(smokerId);
+        addConnectionIfNotExists("Agent", semaphoreLabel, "Signal");
+        System.out.println("GRAPH SMOKERS SEM: Agent signal a " + semaphoreLabel);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentIdleSemaphore_Smokers() {
+        clearSmokersSemaphoreAgentLinks();
+        System.out.println("GRAPH SMOKERS SEM: Agent inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerWaitingSemaphore_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        String semaphoreLabel = smokerSemaphoreLabel(smokerId);
+        clearSmokersSemaphoreSmokerLinks(nodeLabel, semaphoreLabel);
+        addConnectionIfNotExists(nodeLabel, semaphoreLabel, "Espera");
+        System.out.println("GRAPH SMOKERS SEM: " + nodeLabel + " espera " + semaphoreLabel);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerGrantedSemaphore_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        String semaphoreLabel = smokerSemaphoreLabel(smokerId);
+        clearSmokersSemaphoreSmokerLinks(nodeLabel, semaphoreLabel);
+        addConnectionIfNotExists(semaphoreLabel, nodeLabel, "Permiso");
+        System.out.println("GRAPH SMOKERS SEM: " + semaphoreLabel + " -> " + nodeLabel);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerTakingSemaphore_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        String semaphoreLabel = smokerSemaphoreLabel(smokerId);
+        clearSmokersSemaphoreSmokerLinks(nodeLabel, semaphoreLabel);
+        addConnectionIfNotExists("R_Table_Smokers", nodeLabel, "Toma");
+        System.out.println("GRAPH SMOKERS SEM: " + nodeLabel + " toma ingredientes");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerFinishedSemaphore_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        String semaphoreLabel = smokerSemaphoreLabel(smokerId);
+        clearSmokersSemaphoreSmokerLinks(nodeLabel, semaphoreLabel);
+        System.out.println("GRAPH SMOKERS SEM: " + nodeLabel + " inactivo");
         SwingUtilities.invokeLater(this::repaint);
     }
 

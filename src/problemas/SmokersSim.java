@@ -95,6 +95,8 @@ public class SmokersSim extends JPanel implements SimPanel {
                 if (method == SyncMethod.MUTEX) {
                     // Llama a un método específico para fumadores (a crear en DrawingPanel)
                     drawingPanel.setupSmokersGraph();
+                } else if (method == SyncMethod.SEMAPHORES) {
+                    drawingPanel.setupSmokersGraph_Semaphore();
                 }
                 // Añadiremos setups para otros métodos después
                 // else if (method == SyncMethod.SEMAPHORES) { drawingPanel.setupSmokersSemaphoreGraph(); }
@@ -175,6 +177,57 @@ public class SmokersSim extends JPanel implements SimPanel {
     public void updateGraphSmokerReleasingLock(int smokerId) {
         if (drawingPanel != null && currentStrategy instanceof SmokersPureMutexStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showSmokerReleasingLock_Smokers(smokerId));
+        }
+    }
+
+    // --- Métodos para Semáforos ---
+    public void updateGraphAgentWaitingSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SmokersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentWaitingSemaphore_Smokers());
+        }
+    }
+
+    public void updateGraphAgentHoldingSemaphore(Ing ing1, Ing ing2) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersSemaphoreStrategy) {
+            String label = formatIngredientPair(ing1, ing2);
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentHoldingSemaphore_Smokers(label));
+        }
+    }
+
+    public void updateGraphAgentSignalingSemaphore(int smokerId, Ing ing1, Ing ing2) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersSemaphoreStrategy) {
+            String label = formatIngredientPair(ing1, ing2);
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentSignalingSemaphore_Smokers(smokerId, label));
+        }
+    }
+
+    public void updateGraphAgentIdleSemaphore() {
+        if (drawingPanel != null && currentStrategy instanceof SmokersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentIdleSemaphore_Smokers());
+        }
+    }
+
+    public void updateGraphSmokerWaitingSemaphore(int smokerId) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerWaitingSemaphore_Smokers(smokerId));
+        }
+    }
+
+    public void updateGraphSmokerGrantedSemaphore(int smokerId) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerGrantedSemaphore_Smokers(smokerId));
+        }
+    }
+
+    public void updateGraphSmokerTakingSemaphore(int smokerId) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerTakingSemaphore_Smokers(smokerId));
+        }
+    }
+
+    public void updateGraphSmokerFinishedSemaphore(int smokerId) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersSemaphoreStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerFinishedSemaphore_Smokers(smokerId));
         }
     }
 
