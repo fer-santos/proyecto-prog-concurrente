@@ -468,6 +468,52 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeConnection("R_Barrier_Smokers", smokerLabel);
     }
 
+    private synchronized void clearReadersWritersActorLinks(String actorLabel) {
+        if (actorLabel == null) {
+            return;
+        }
+        removeConnection(actorLabel, "R_Mutex_RW");
+        removeConnection("R_Mutex_RW", actorLabel);
+        removeConnection(actorLabel, "R_Document_RW");
+        removeConnection("R_Document_RW", actorLabel);
+    }
+
+    private synchronized void ensureReadersWritersActorNode(String actorLabel) {
+        if (actorLabel == null) {
+            return;
+        }
+        if (findNodeIdByLabel(actorLabel).isPresent()) {
+            return;
+        }
+        boolean isReader = actorLabel.startsWith("L");
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int baseX = isReader ? centerX - (int) (width * 0.28) : centerX + (int) (width * 0.28);
+        int startY = centerY - (int) (height * 0.06);
+        int spacingY = Math.max(48, (int) (height * 0.12));
+        int index = parseRwActorIndex(actorLabel);
+        int row = index % 6;
+        int column = index / 6;
+        int columnOffset = (int) (width * 0.06) * column;
+        int nodeX = isReader ? baseX - columnOffset : baseX + columnOffset;
+        int nodeY = startY + row * spacingY;
+        addNodeIfNotExists(actorLabel, NodeType.PROCESO, nodeX, nodeY);
+    }
+
+    private int parseRwActorIndex(String actorLabel) {
+        if (actorLabel == null || actorLabel.length() < 2) {
+            return 0;
+        }
+        try {
+            int value = Integer.parseInt(actorLabel.substring(1));
+            return Math.max(0, value - 1);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
     private synchronized void clearSleepingBarberBarrierLinks(String processLabel) {
         if (processLabel == null) {
             return;
@@ -1925,6 +1971,46 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         String nodeLabel = smokerNodeLabel(smokerId);
         clearSmokersBarrierSmokerLinks(nodeLabel);
         System.out.println("GRAPH SMOKERS BAR: " + nodeLabel + " inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    // --- Métodos Lectores-Escritores Mutex ---
+    public synchronized void setupReadersWritersGraph_Mutex() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int mutexY = centerY - (int) (height * 0.22);
+        int documentY = centerY + (int) (height * 0.02);
+
+        addNodeIfNotExists("R_Mutex_RW", NodeType.RECURSO, centerX, mutexY);
+        addNodeIfNotExists("R_Document_RW", NodeType.RECURSO, centerX, documentY);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showActorRequestingLock_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists(actorLabel, "R_Mutex_RW", "Solicitud");
+        System.out.println("GRAPH RW MUTEX: " + actorLabel + " solicita R_Mutex_RW");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showActorHoldingLock_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        addConnectionIfNotExists("R_Mutex_RW", actorLabel, "Asignado");
+        String action = (actorLabel != null && actorLabel.startsWith("L")) ? "Lee" : "Escribe";
+        addConnectionIfNotExists(actorLabel, "R_Document_RW", action);
+        System.out.println("GRAPH RW MUTEX: " + actorLabel + " accede al documento");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showActorReleasingLock_RW(String actorLabel) {
+        ensureReadersWritersActorNode(actorLabel);
+        clearReadersWritersActorLinks(actorLabel);
+        System.out.println("GRAPH RW MUTEX: " + actorLabel + " libera mutex");
         SwingUtilities.invokeLater(this::repaint);
     }
 

@@ -10,6 +10,8 @@ import problemas.ReadersWritersSim.Role;
 
 public class ReadersWritersMutexStrategy implements ReadersWritersStrategy {
 
+    private static final long VISUALIZATION_DELAY = 420L;
+
     private final ReadersWritersSim panel;
     private Thread spawner;
     private ExecutorService exec;
@@ -18,85 +20,215 @@ public class ReadersWritersMutexStrategy implements ReadersWritersStrategy {
     public ReadersWritersMutexStrategy(ReadersWritersSim panel) {
         this.panel = panel;
     }
-    
+
     @Override
     public void start() {
         mutex = new ReentrantLock(true);
         exec = Executors.newCachedThreadPool(r -> {
-            Thread t = new Thread(r);
+            Thread t = new Thread(r, "RW-Mutex-Actor");
             t.setDaemon(true);
             return t;
         });
 
-        spawner = new Thread(() -> {
-            while (panel.running.get()) {
-                if (panel.actors.size() < 20) {
-                    spawn(Math.random() < 0.7 ? Role.READER : Role.WRITER);
-                }
-                sleepRand(400, 1000);
-            }
-        });
+        spawner = new Thread(this::runSpawner, "RW-Mutex-Spawner");
         spawner.setDaemon(true);
         spawner.start();
     }
 
     @Override
     public void stop() {
-        if (spawner != null) spawner.interrupt();
-        if (exec != null) exec.shutdownNow();
+        if (spawner != null) {
+            spawner.interrupt();
+        }
+        if (exec != null) {
+            exec.shutdownNow();
+        }
     }
 
-    private void spawn(Role r) {
-        Actor a = new Actor();
-        a.role = r;
-        a.color = (r == Role.READER) ? new Color(90, 160, 255) : new Color(230, 90, 90);
-        a.x = (r == Role.READER) ? panel.getWidth() + 40 : -40;
-        a.y = panel.getHeight() * 0.75 + (Math.random() * 40 - 20);
-        a.tx = (r == Role.READER) ? panel.getWidth() - 80 : 80;
-        a.ty = a.y;
-        panel.actors.add(a);
-    }
-    
-    @Override
-    public void requestAccess(Actor a) {
-        exec.submit(() -> {
-            try {
-                if (a.role == Role.READER) panel.readersWaiting++; else panel.writersWaiting++;
-                mutex.lock();
-                try {
-                    if (a.role == Role.READER) {
-                        panel.readersWaiting--;
-                        panel.readersActive++;
-                        a.state = ReadersWritersSim.AState.READING;
-                        a.tx = panel.docCenter().x + (Math.random() * 80 - 40);
-                        a.ty = panel.docCenter().y + (Math.random() * 80 - 40);
-                        sleepRand(800, 1500);
-                        panel.readersActive--;
-                        a.state = ReadersWritersSim.AState.LEAVING;
-                        a.tx = panel.getWidth() + 40;
-                    } else {
-                        panel.writersWaiting--;
-                        panel.writerActive = true;
-                        a.state = ReadersWritersSim.AState.WRITING;
-                        a.tx = panel.docCenter().x;
-                        a.ty = panel.docCenter().y;
-                        sleepRand(1000, 1800);
-                        panel.writerActive = false;
-                        a.state = ReadersWritersSim.AState.LEAVING;
-                        a.tx = -40;
-                    }
-                } finally {
-                    mutex.unlock();
-                }
-            } catch (Exception ignored) {}
-        });
-    }
-
-    private void sleepRand(int a, int b) {
+    private void runSpawner() {
         try {
-            Thread.sleep(a + (int) (Math.random() * (b - a)));
+            while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
+                if (panel.actors.size() < 20) {
+                    spawn(Math.random() < 0.7 ? Role.READER : Role.WRITER);
+                }
+                if (!sleepRand(400, 1000)) {
+                    break;
+                }
+            }
+        } finally {
+            // No-op cleanup; executor shutdown handled in stop()
+        }
+    }
+
+    private void spawn(Role role) {
+        Actor actor = new Actor();
+        actor.role = role;
+        actor.color = (role == Role.READER) ? new Color(90, 160, 255) : new Color(230, 90, 90);
+        actor.id = panel.getNextActorId();
+        actor.x = (role == Role.READER) ? panel.getWidth() + 40 : -40;
+        actor.y = panel.getHeight() * 0.75 + (Math.random() * 40 - 20);
+        actor.tx = (role == Role.READER) ? panel.getWidth() - 80 : 80;
+        actor.ty = actor.y;
+        panel.actors.add(actor);
+    }
+
+    @Override
+    public void requestAccess(Actor actor) {
+        if (exec == null) {
+            return;
+        }
+        exec.submit(() -> handleActor(actor));
+    }
+
+    private void handleActor(Actor actor) {
+        if (actor == null) {
+            return;
+        }
+        if (actor.role == Role.READER) {
+            handleReader(actor);
+        } else {
+            handleWriter(actor);
+        }
+    }
+
+    private void handleReader(Actor actor) {
+        boolean waitingIncremented = false;
+        boolean activeIncremented = false;
+        boolean locked = false;
+        try {
+            panel.readersWaiting++;
+            waitingIncremented = true;
+            panel.updateGraphReaderRequestingLock(actor.id);
+            if (!sleepVisualization()) {
+                return;
+            }
+
+            mutex.lockInterruptibly();
+            locked = true;
+
+            panel.readersWaiting--;
+            waitingIncremented = false;
+            panel.readersActive++;
+            activeIncremented = true;
+
+            panel.updateGraphReaderHoldingLock(actor.id);
+            if (!sleepVisualization()) {
+                return;
+            }
+
+            actor.state = ReadersWritersSim.AState.READING;
+            actor.tx = panel.docCenter().x + (Math.random() * 80 - 40);
+            actor.ty = panel.docCenter().y + (Math.random() * 80 - 40);
+            if (!sleepRand(800, 1500)) {
+                return;
+            }
+
+            actor.state = ReadersWritersSim.AState.LEAVING;
+            actor.tx = panel.getWidth() + 40;
+            actor.ty = actor.y;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+        } finally {
+            if (locked) {
+                if (activeIncremented) {
+                    panel.readersActive--;
+                    activeIncremented = false;
+                }
+                panel.updateGraphReaderReleasingLock(actor.id);
+                mutex.unlock();
+                sleepVisualization();
+            }
+            if (waitingIncremented) {
+                panel.readersWaiting--;
+            }
         }
+    }
+
+    private void handleWriter(Actor actor) {
+        boolean waitingIncremented = false;
+        boolean writerActiveSet = false;
+        boolean locked = false;
+        try {
+            panel.writersWaiting++;
+            waitingIncremented = true;
+            panel.updateGraphWriterRequestingLock(actor.id);
+            if (!sleepVisualization()) {
+                return;
+            }
+
+            mutex.lockInterruptibly();
+            locked = true;
+
+            panel.writersWaiting--;
+            waitingIncremented = false;
+            panel.writerActive = true;
+            writerActiveSet = true;
+
+            panel.updateGraphWriterHoldingLock(actor.id);
+            if (!sleepVisualization()) {
+                return;
+            }
+
+            actor.state = ReadersWritersSim.AState.WRITING;
+            actor.tx = panel.docCenter().x;
+            actor.ty = panel.docCenter().y;
+            if (!sleepRand(1000, 1800)) {
+                return;
+            }
+
+            actor.state = ReadersWritersSim.AState.LEAVING;
+            actor.tx = -40;
+            actor.ty = actor.y;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            if (locked) {
+                if (writerActiveSet) {
+                    panel.writerActive = false;
+                    writerActiveSet = false;
+                }
+                panel.updateGraphWriterReleasingLock(actor.id);
+                mutex.unlock();
+                sleepVisualization();
+            }
+            if (waitingIncremented) {
+                panel.writersWaiting--;
+            }
+        }
+    }
+
+    private boolean sleepVisualization() {
+        if (!panel.running.get()) {
+            return false;
+        }
+        try {
+            Thread.sleep(VISUALIZATION_DELAY);
+            return panel.running.get() && !Thread.currentThread().isInterrupted();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private boolean sleepRand(int min, int max) {
+        if (!panel.running.get()) {
+            return false;
+        }
+        int span = Math.max(0, max - min);
+        int duration = min + rnd(span + 1);
+        try {
+            Thread.sleep(duration);
+            return panel.running.get() && !Thread.currentThread().isInterrupted();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private int rnd(int bound) {
+        if (bound <= 0) {
+            return 0;
+        }
+        return (int) (Math.random() * bound);
     }
 }
