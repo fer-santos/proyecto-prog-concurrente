@@ -137,6 +137,8 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
                     drawingPanel.setupReadersWritersGraph_Semaphore();
                 } else if (method == SyncMethod.VAR_COND) {
                     drawingPanel.setupReadersWritersGraph_Condition();
+                } else if (method == SyncMethod.MONITORS) {
+                    drawingPanel.setupReadersWritersGraph_Monitor();
                 }
                 // Añadiremos setups para otros métodos después
                 // else if ...
@@ -417,6 +419,115 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
     public void updateGraphWriterFinishedCondition(int actorId) {
         if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showWriterFinishedCondition_RW("E" + actorId));
+        }
+    }
+
+    // --- Métodos para Monitores ---
+    public void updateGraphReaderRequestingMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderRequestingMonitor_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderHoldingMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderHoldingMonitor_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderWaitingMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderWaitingMonitor_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderSignaledMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderSignaledMonitor_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderReleasingMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderReleasingMonitor_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderUsingDocumentMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderUsingDocumentMonitor_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderSignalingWriterMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderSignalingWriterMonitor_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderSignalingReadersMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderSignalingReadersMonitor_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphReaderFinishedMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showReaderFinishedMonitor_RW("L" + actorId));
+        }
+    }
+
+    public void updateGraphWriterRequestingMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterRequestingMonitor_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterHoldingMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterHoldingMonitor_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterWaitingMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterWaitingMonitor_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterSignaledMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterSignaledMonitor_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterReleasingMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterReleasingMonitor_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterUsingDocumentMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterUsingDocumentMonitor_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterSignalingWriterMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterSignalingWriterMonitor_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterSignalingReadersMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterSignalingReadersMonitor_RW("E" + actorId));
+        }
+    }
+
+    public void updateGraphWriterFinishedMonitor(int actorId) {
+        if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showWriterFinishedMonitor_RW("E" + actorId));
         }
     }
 

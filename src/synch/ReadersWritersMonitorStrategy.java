@@ -9,26 +9,21 @@ import problemas.ReadersWritersSim;
 import problemas.ReadersWritersSim.Actor;
 import problemas.ReadersWritersSim.Role;
 
-/**
- * Implementación del patrón Monitor (según Hoare) para Lectores-Escritores.
- * Utiliza ReentrantLock y dos Condition (okToRead, okToWrite). Permite
- * múltiples lectores concurrentes y da cierta preferencia a escritores.
- */
 public class ReadersWritersMonitorStrategy implements ReadersWritersStrategy {
+
+    private static final long VISUALIZATION_DELAY = 420L;
 
     private final ReadersWritersSim panel;
     private Thread spawner;
     private ExecutorService exec;
 
-    // --- Componentes del Monitor ---
-    private final ReentrantLock lock = new ReentrantLock(true); // Mutex [cite: 99]
-    private final Condition okToRead = lock.newCondition(); // Condición lectores [cite: 53, 440]
-    private final Condition okToWrite = lock.newCondition();// Condición escritores [cite: 53, 440]
+    private final ReentrantLock lock = new ReentrantLock(true);
+    private final Condition okToRead = lock.newCondition();
+    private final Condition okToWrite = lock.newCondition();
 
-    // --- Estado Protegido por el Monitor ---
-    private int readersActive = 0;      // Lectores activos [cite: 434]
-    private boolean writerActive = false; // Escritor activo [cite: 436]
-    private int writersWaiting = 0;     // Escritores esperando
+    private int readersActive;
+    private boolean writerActive;
+    private int writersWaiting;
 
     public ReadersWritersMonitorStrategy(ReadersWritersSim panel) {
         this.panel = panel;
@@ -36,31 +31,21 @@ public class ReadersWritersMonitorStrategy implements ReadersWritersStrategy {
 
     @Override
     public void start() {
-        // Reiniciar estado
         readersActive = 0;
         writerActive = false;
         writersWaiting = 0;
+        panel.readersWaiting = 0;
+        panel.writersWaiting = 0;
+        panel.readersActive = 0;
+        panel.writerActive = false;
 
-        // Executor para hilos de actores
         exec = Executors.newCachedThreadPool(r -> {
-            Thread t = new Thread(r);
+            Thread t = new Thread(r, "RW-Monitor-Actor");
             t.setDaemon(true);
             return t;
         });
 
-        // Hilo que genera actores
-        spawner = new Thread(() -> {
-            try { // Manejo de InterruptedException
-                while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
-                    if (panel.actors.size() < 20) {
-                        spawn(Math.random() < 0.7 ? Role.READER : Role.WRITER);
-                    }
-                    sleepRandInterruptibly(400, 1000);
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // Restaura estado interrumpido
-            }
-        }, "Spawner-Monitor"); // Nombre del hilo
+        spawner = new Thread(this::runSpawner, "RW-Monitor-Spawner");
         spawner.setDaemon(true);
         spawner.start();
     }
@@ -73,136 +58,262 @@ public class ReadersWritersMonitorStrategy implements ReadersWritersStrategy {
         if (exec != null) {
             exec.shutdownNow();
         }
+        lock.lock();
+        try {
+            okToRead.signalAll();
+            okToWrite.signalAll();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void runSpawner() {
+        try {
+            while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
+                if (panel.actors.size() < 20) {
+                    spawn(Math.random() < 0.7 ? Role.READER : Role.WRITER);
+                }
+                if (!sleepRand(400, 1000)) {
+                    break;
+                }
+            }
+        } finally {
+            // Executor cleanup handled in stop()
+        }
+    }
+
+    private void spawn(Role role) {
+        Actor actor = new Actor();
+        actor.role = role;
+        actor.color = (role == Role.READER) ? new Color(90, 160, 255) : new Color(230, 90, 90);
+        actor.id = panel.getNextActorId();
+        actor.x = (role == Role.READER) ? panel.getWidth() + 40 : -40;
+        actor.y = panel.getHeight() * 0.75 + (Math.random() * 40 - 20);
+        actor.tx = (role == Role.READER) ? panel.getWidth() - 80 : 80;
+        actor.ty = actor.y;
+        panel.actors.add(actor);
     }
 
     @Override
-    public void requestAccess(Actor a) {
-        exec.submit(() -> {
+    public void requestAccess(Actor actor) {
+        if (exec == null || actor == null) {
+            return;
+        }
+        exec.submit(() -> handleActor(actor));
+    }
+
+    private void handleActor(Actor actor) {
+        if (actor.role == Role.READER) {
             try {
-                if (a.role == Role.READER) {
-                    startRead(a);
-                    sleepRandInterruptibly(800, 1500); // Simula lectura
-                    endRead(a);
-                } else { // WRITER
-                    startWrite(a);
-                    sleepRandInterruptibly(1000, 1800); // Simula escritura
-                    endWrite(a);
-                }
+                processReader(actor);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+            } finally {
+                panel.updateGraphReaderFinishedMonitor(actor.id);
+                sleepVisualization();
             }
-        });
+        } else {
+            try {
+                processWriter(actor);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                panel.updateGraphWriterFinishedMonitor(actor.id);
+                sleepVisualization();
+            }
+        }
     }
 
-    // --- Procedimientos del Monitor (según Hoare) ---
-    private void startRead(Actor a) throws InterruptedException {
-        lock.lock(); // Entra al monitor [cite: 100]
+    private void processReader(Actor actor) throws InterruptedException {
+        panel.updateGraphReaderRequestingMonitor(actor.id);
+        ensure(sleepVisualization());
+
+        lock.lockInterruptibly();
         try {
-            // Espera si hay escritor activo o escritores esperando [cite: 425, 449]
+            panel.updateGraphReaderHoldingMonitor(actor.id);
+            ensure(sleepVisualization());
+
             while (writerActive || writersWaiting > 0) {
-                panel.readersWaiting++; // Actualiza contador visual
-                okToRead.await(); // Espera en la condición [cite: 46, 449]
-                panel.readersWaiting--; // Actualiza contador visual
+                panel.readersWaiting++;
+                try {
+                    panel.updateGraphReaderWaitingMonitor(actor.id);
+                    ensure(sleepVisualization());
+                    okToRead.await();
+                    panel.updateGraphReaderSignaledMonitor(actor.id);
+                    ensure(sleepVisualization());
+                } finally {
+                    panel.readersWaiting = Math.max(0, panel.readersWaiting - 1);
+                }
             }
-            // Entra a leer
+
             readersActive++;
-            panel.readersActive = readersActive; // Actualiza visualización [cite: 451]
+            panel.readersActive = readersActive;
 
-            // Mueve actor visualmente
-            a.state = ReadersWritersSim.AState.READING;
-            a.tx = panel.docCenter().x + (Math.random() * 80 - 40);
-            a.ty = panel.docCenter().y + (Math.random() * 80 - 40);
-
-            // Hoare sugiere signal al final, pero signal aquí permite entrada en cascada
-            // okToRead.signal(); // Opcional: despertar a otro lector [cite: 452]
+            panel.updateGraphReaderReleasingMonitor(actor.id);
+            ensure(sleepVisualization());
         } finally {
-            lock.unlock(); // Sale del monitor [cite: 100, 105]
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
-    }
 
-    private void endRead(Actor a) {
-        lock.lock(); // Entra al monitor [cite: 100]
+        actor.state = ReadersWritersSim.AState.READING;
+        actor.tx = panel.docCenter().x + (Math.random() * 80 - 40);
+        actor.ty = panel.docCenter().y + (Math.random() * 80 - 40);
+        panel.updateGraphReaderUsingDocumentMonitor(actor.id);
+        ensure(sleepVisualization());
+        ensure(sleepRand(800, 1500));
+
+        actor.state = ReadersWritersSim.AState.LEAVING;
+        actor.tx = panel.getWidth() + 40;
+        actor.ty = actor.y;
+
+        panel.updateGraphReaderRequestingMonitor(actor.id);
+        ensure(sleepVisualization());
+
+        lock.lockInterruptibly();
         try {
-            readersActive--;
-            panel.readersActive = readersActive; // Actualiza visualización [cite: 455]
+            panel.updateGraphReaderHoldingMonitor(actor.id);
+            ensure(sleepVisualization());
 
-            // Si es el último lector, despierta a UN escritor [cite: 456]
+            readersActive = Math.max(0, readersActive - 1);
+            panel.readersActive = readersActive;
+
             if (readersActive == 0) {
-                okToWrite.signal(); // Despierta a un escritor esperando [cite: 47, 456]
+                if (writersWaiting > 0) {
+                    panel.updateGraphReaderSignalingWriterMonitor(actor.id);
+                    ensure(sleepVisualization());
+                    okToWrite.signal();
+                } else {
+                    panel.updateGraphReaderSignalingReadersMonitor(actor.id);
+                    ensure(sleepVisualization());
+                    okToRead.signalAll();
+                }
             }
 
-            // Mueve actor visualmente
-            a.state = ReadersWritersSim.AState.LEAVING;
-            a.tx = panel.getWidth() + 40;
-
+            panel.updateGraphReaderReleasingMonitor(actor.id);
+            ensure(sleepVisualization());
         } finally {
-            lock.unlock(); // Sale del monitor [cite: 100, 105]
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
     }
 
-    private void startWrite(Actor a) throws InterruptedException {
-        lock.lock(); // Entra al monitor [cite: 100]
-        try {
-            writersWaiting++;
-            panel.writersWaiting = writersWaiting; // Actualiza visualización
+    private void processWriter(Actor actor) throws InterruptedException {
+        panel.updateGraphWriterRequestingMonitor(actor.id);
+        ensure(sleepVisualization());
 
-            // Espera si hay lectores activos o un escritor activo [cite: 457]
+        lock.lockInterruptibly();
+        try {
+            panel.updateGraphWriterHoldingMonitor(actor.id);
+            ensure(sleepVisualization());
+
             while (readersActive > 0 || writerActive) {
-                okToWrite.await(); // Espera en la condición [cite: 46, 457]
+                writersWaiting++;
+                panel.writersWaiting = writersWaiting;
+                try {
+                    panel.updateGraphWriterWaitingMonitor(actor.id);
+                    ensure(sleepVisualization());
+                    okToWrite.await();
+                    panel.updateGraphWriterSignaledMonitor(actor.id);
+                    ensure(sleepVisualization());
+                } finally {
+                    writersWaiting = Math.max(0, writersWaiting - 1);
+                    panel.writersWaiting = writersWaiting;
+                }
             }
-            // Sale de la espera
-            writersWaiting--;
-            panel.writersWaiting = writersWaiting; // Actualiza visualización
 
-            // Entra a escribir
             writerActive = true;
-            panel.writerActive = true; // Actualiza visualización [cite: 457]
+            panel.writerActive = true;
 
-            // Mueve actor visualmente
-            a.state = ReadersWritersSim.AState.WRITING;
-            a.tx = panel.docCenter().x;
-            a.ty = panel.docCenter().y;
-
+            panel.updateGraphWriterReleasingMonitor(actor.id);
+            ensure(sleepVisualization());
         } finally {
-            lock.unlock(); // Sale del monitor [cite: 100, 105]
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
-    }
 
-    private void endWrite(Actor a) {
-        lock.lock(); // Entra al monitor [cite: 100]
+        actor.state = ReadersWritersSim.AState.WRITING;
+        actor.tx = panel.docCenter().x;
+        actor.ty = panel.docCenter().y;
+        panel.updateGraphWriterUsingDocumentMonitor(actor.id);
+        ensure(sleepVisualization());
+        ensure(sleepRand(1000, 1800));
+
+        actor.state = ReadersWritersSim.AState.LEAVING;
+        actor.tx = -40;
+        actor.ty = actor.y;
+
+        panel.updateGraphWriterRequestingMonitor(actor.id);
+        ensure(sleepVisualization());
+
+        lock.lockInterruptibly();
         try {
-            writerActive = false;
-            panel.writerActive = false; // Actualiza visualización [cite: 459]
+            panel.updateGraphWriterHoldingMonitor(actor.id);
+            ensure(sleepVisualization());
 
-            // Decide a quién despertar, dando prioridad a escritores [cite: 426, 459]
-            if (writersWaiting > 0) { // Si hay escritores esperando
-                okToWrite.signal(); // Despierta a UN escritor [cite: 47, 459]
-            } else { // Si no hay escritores, despierta a TODOS los lectores
-                okToRead.signalAll(); // Despierta a todos los lectores [cite: 47, 459]
+            writerActive = false;
+            panel.writerActive = false;
+
+            if (writersWaiting > 0) {
+                panel.updateGraphWriterSignalingWriterMonitor(actor.id);
+                ensure(sleepVisualization());
+                okToWrite.signal();
+            } else {
+                panel.updateGraphWriterSignalingReadersMonitor(actor.id);
+                ensure(sleepVisualization());
+                okToRead.signalAll();
             }
 
-            // Mueve actor visualmente
-            a.state = ReadersWritersSim.AState.LEAVING;
-            a.tx = -40;
-
+            panel.updateGraphWriterReleasingMonitor(actor.id);
+            ensure(sleepVisualization());
         } finally {
-            lock.unlock(); // Sale del monitor [cite: 100, 105]
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
     }
 
-    // --- Métodos Auxiliares ---
-    private void spawn(Role r) {
-        Actor a = new Actor();
-        a.role = r;
-        a.color = (r == Role.READER) ? new Color(90, 160, 255) : new Color(230, 90, 90);
-        a.x = (r == Role.READER) ? panel.getWidth() + 40 : -40;
-        a.y = panel.getHeight() * 0.75 + (Math.random() * 40 - 20);
-        a.tx = (r == Role.READER) ? panel.getWidth() - 80 : 80;
-        a.ty = a.y;
-        panel.actors.add(a);
+    private void ensure(boolean keepRunning) throws InterruptedException {
+        if (!keepRunning) {
+            throw new InterruptedException("Visualization interrupted");
+        }
     }
 
-    private void sleepRandInterruptibly(int a, int b) throws InterruptedException {
-        Thread.sleep(a + (int) (Math.random() * (b - a)));
+    private boolean sleepVisualization() {
+        if (!panel.running.get()) {
+            return false;
+        }
+        try {
+            Thread.sleep(VISUALIZATION_DELAY);
+            return panel.running.get() && !Thread.currentThread().isInterrupted();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private boolean sleepRand(int min, int max) {
+        if (!panel.running.get()) {
+            return false;
+        }
+        int span = Math.max(0, max - min);
+        int duration = min + rnd(span + 1);
+        try {
+            Thread.sleep(duration);
+            return panel.running.get() && !Thread.currentThread().isInterrupted();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private int rnd(int bound) {
+        if (bound <= 0) {
+            return 0;
+        }
+        return (int) (Math.random() * bound);
     }
 }
