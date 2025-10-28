@@ -148,8 +148,8 @@ public class SmokersSim extends JPanel implements SimPanel {
 
     public void updateGraphAgentHoldingLock(Ing ing1, Ing ing2) {
         if (drawingPanel != null && currentStrategy instanceof SmokersPureMutexStrategy) {
-            // Pasamos los ingredientes para mostrarlos si es necesario
-            SwingUtilities.invokeLater(() -> drawingPanel.showAgentHoldingLock_Smokers(ing1, ing2));
+            String label = formatIngredientPair(ing1, ing2);
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentHoldingLock_Smokers(label));
         }
     }
 
@@ -311,6 +311,24 @@ public class SmokersSim extends JPanel implements SimPanel {
     private void drawCentered(Graphics2D g2, String s, int x, int y) {
         FontMetrics fm = g2.getFontMetrics();
         g2.drawString(s, x - fm.stringWidth(s) / 2, y + fm.getAscent() / 2);
+    }
+
+    private String formatIngredientPair(Ing ing1, Ing ing2) {
+        if (ing1 == null || ing2 == null) {
+            return "";
+        }
+        return shortIngredientName(ing1) + "+" + shortIngredientName(ing2);
+    }
+
+    private String shortIngredientName(Ing ing) {
+        if (ing == null) {
+            return "";
+        }
+        return switch (ing) {
+            case TABACO -> "Tabaco";
+            case PAPEL -> "Papel";
+            case CERILLOS -> "Cerillos";
+        };
     }
 
     private void drawIngredient(Graphics2D g2, Ing ing, int x, int y) {
