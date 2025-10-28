@@ -97,6 +97,8 @@ public class SmokersSim extends JPanel implements SimPanel {
                     drawingPanel.setupSmokersGraph();
                 } else if (method == SyncMethod.SEMAPHORES) {
                     drawingPanel.setupSmokersGraph_Semaphore();
+                } else if (method == SyncMethod.VAR_COND) {
+                    drawingPanel.setupSmokersGraph_Condition();
                 }
                 // Añadiremos setups para otros métodos después
                 // else if (method == SyncMethod.SEMAPHORES) { drawingPanel.setupSmokersSemaphoreGraph(); }
@@ -228,6 +230,56 @@ public class SmokersSim extends JPanel implements SimPanel {
     public void updateGraphSmokerFinishedSemaphore(int smokerId) {
         if (drawingPanel != null && currentStrategy instanceof SmokersSemaphoreStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showSmokerFinishedSemaphore_Smokers(smokerId));
+        }
+    }
+
+    // --- Métodos para Variable de Condición ---
+    public void updateGraphAgentRequestingCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SmokersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentRequestingCondition_Smokers());
+        }
+    }
+
+    public void updateGraphAgentPlacingIngredientsCondition(Ing ing1, Ing ing2) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersConditionStrategy) {
+            String label = formatIngredientPair(ing1, ing2);
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentPlacingCondition_Smokers(label));
+        }
+    }
+
+    public void updateGraphAgentSignalingCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SmokersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentSignalingCondition_Smokers());
+        }
+    }
+
+    public void updateGraphAgentIdleCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SmokersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showAgentIdleCondition_Smokers());
+        }
+    }
+
+    public void updateGraphSmokerWaitingCondition(int smokerId) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerWaitingCondition_Smokers(smokerId));
+        }
+    }
+
+    public void updateGraphSmokerTakingCondition(int smokerId) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerTakingCondition_Smokers(smokerId));
+        }
+    }
+
+    public void updateGraphSmokerSignalingCondition() {
+        if (drawingPanel != null && currentStrategy instanceof SmokersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerSignalingCondition_Smokers());
+        }
+    }
+
+    public void updateGraphSmokerIdleCondition(int smokerId) {
+        if (drawingPanel != null && currentStrategy instanceof SmokersConditionStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showSmokerIdleCondition_Smokers(smokerId));
         }
     }
 

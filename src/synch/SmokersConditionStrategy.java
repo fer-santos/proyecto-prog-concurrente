@@ -6,17 +6,17 @@ import problemas.SmokersSim;
 import problemas.SmokersSim.Ing;
 import problemas.SmokersSim.SState;
 
-// NOTA: Esta es la implementación del patrón MONITOR (Mutex + Condition)
 public class SmokersConditionStrategy implements SynchronizationStrategy {
+
+    private static final long VISUALIZATION_DELAY = 420L;
 
     private final SmokersSim panel;
     private Thread agentThread;
     private final Thread[] smokerThreads = new Thread[3];
 
-    // El "Monitor"
-    private ReentrantLock mtx;
-    private Condition tableEmpty; // Condición para que el agente espere
-    private Condition canSmoke;   // Condición para que los fumadores esperen
+    private ReentrantLock monitorLock;
+    private Condition tableEmpty;
+    private Condition canSmoke;
 
     public SmokersConditionStrategy(SmokersSim panel) {
         this.panel = panel;
@@ -24,113 +24,250 @@ public class SmokersConditionStrategy implements SynchronizationStrategy {
 
     @Override
     public void start() {
-        mtx = new ReentrantLock(true);
-        tableEmpty = mtx.newCondition();
-        canSmoke = mtx.newCondition();
+        monitorLock = new ReentrantLock(true);
+        tableEmpty = monitorLock.newCondition();
+        canSmoke = monitorLock.newCondition();
 
-        // --- Hilo del Agente ---
-        agentThread = new Thread(() -> {
-            while (panel.running.get()) {
-                mtx.lock();
-                try {
-                    // Espera mientras la mesa NO esté vacía
-                    while (panel.i1 != null) {
-                        tableEmpty.await();
-                    }
-                    // Pone ingredientes y avisa a los fumadores
-                    putRandomPair();
-                    canSmoke.signalAll();
-                } catch (InterruptedException e) { return; }
-                finally {
-                    mtx.unlock();
-                }
-                sleepRand(400, 800); // Duerme fuera del lock
-            }
-        }, "Agent-Cond"); // Nombre cambiado
-
-        // --- Hilos de los Fumadores ---
-        for (int id = 0; id < 3; id++) {
-            final int who = id;
-            smokerThreads[id] = new Thread(() -> {
-                while (panel.running.get()) {
-                    mtx.lock();
-                    try {
-                        // Espera mientras NO pueda fumar (no están sus ingredientes)
-                        while (!canSmokeNow(who)) {
-                            canSmoke.await();
-                        }
-                        
-                        // Toma los ingredientes y empieza a armar
-                        panel.i1 = panel.i2 = null;
-                        panel.activeSmoker = who;
-                        panel.sstate[who] = SState.ARMANDO;
-
-                    } catch (InterruptedException e) { return; }
-                    finally {
-                        mtx.unlock();
-                    }
-
-                    // --- Armar y Fumar (FUERA DEL LOCK) ---
-                    sleepRand(500, 900); // Armando...
-                    panel.sstate[who] = SState.FUMANDO;
-                    sleepRand(800, 1400); // Fumando...
-                    
-                    // --- Terminar (Requiere lock brevemente) ---
-                    mtx.lock();
-                    try {
-                        panel.sstate[who] = SState.ESPERANDO;
-                        panel.activeSmoker = -1;
-                        tableEmpty.signal(); // Avisa al agente que la mesa está libre
-                    } finally {
-                        mtx.unlock();
-                    }
-                }
-            }, "Smoker-Cond-" + who); // Nombre cambiado
-        }
-        
-        // Iniciar hilos
+        agentThread = new Thread(this::runAgent, "Agent-Cond");
         agentThread.setDaemon(true);
         agentThread.start();
-        for (Thread t : smokerThreads) {
+
+        for (int id = 0; id < smokerThreads.length; id++) {
+            final int smokerId = id;
+            Thread t = new Thread(() -> runSmoker(smokerId), "Smoker-Cond-" + smokerId);
             t.setDaemon(true);
+            smokerThreads[id] = t;
             t.start();
         }
     }
-    
-    // --- MÉTODOS AUXILIARES Y stop() (iguales que antes) ---
 
     @Override
     public void stop() {
-        if (agentThread != null) agentThread.interrupt();
-        for (Thread t : smokerThreads) {
-            if (t != null) t.interrupt();
+        if (agentThread != null) {
+            agentThread.interrupt();
+        }
+        for (Thread smokerThread : smokerThreads) {
+            if (smokerThread != null) {
+                smokerThread.interrupt();
+            }
+        }
+        if (monitorLock != null) {
+            monitorLock.lock();
+            try {
+                tableEmpty.signalAll();
+                canSmoke.signalAll();
+            } finally {
+                monitorLock.unlock();
+            }
         }
     }
-    
+
+    private void runAgent() {
+        try {
+            while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
+                panel.updateGraphAgentRequestingCondition();
+                if (!sleepVisualization()) {
+                    break;
+                }
+
+                boolean locked = false;
+                try {
+                    monitorLock.lockInterruptibly();
+                    locked = true;
+
+                    while (panel.i1 != null && panel.running.get() && !Thread.currentThread().isInterrupted()) {
+                        panel.updateGraphAgentIdleCondition();
+                        if (!sleepVisualization()) {
+                            locked = releaseLockSafely(locked);
+                            return;
+                        }
+                        tableEmpty.await();
+                        panel.updateGraphAgentRequestingCondition();
+                        if (!sleepVisualization()) {
+                            locked = releaseLockSafely(locked);
+                            return;
+                        }
+                    }
+
+                    if (!panel.running.get() || Thread.currentThread().isInterrupted()) {
+                        locked = releaseLockSafely(locked);
+                        break;
+                    }
+
+                    Ing[] pair = pickRandomPair();
+                    panel.i1 = pair[0];
+                    panel.i2 = pair[1];
+                    panel.activeSmoker = -1;
+                    panel.updateGraphAgentPlacingIngredientsCondition(pair[0], pair[1]);
+                    if (!sleepVisualization()) {
+                        locked = releaseLockSafely(locked);
+                        break;
+                    }
+
+                    panel.updateGraphAgentSignalingCondition();
+                    canSmoke.signalAll();
+                    if (!sleepVisualization()) {
+                        locked = releaseLockSafely(locked);
+                        break;
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } finally {
+                    locked = releaseLockSafely(locked);
+                }
+
+                if (!sleepRand(400, 800)) {
+                    break;
+                }
+            }
+        } finally {
+            panel.updateGraphAgentIdleCondition();
+        }
+    }
+
+    private void runSmoker(int smokerId) {
+        try {
+            while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
+                panel.updateGraphSmokerWaitingCondition(smokerId);
+                if (!sleepVisualization()) {
+                    break;
+                }
+
+                boolean locked = false;
+                try {
+                    monitorLock.lockInterruptibly();
+                    locked = true;
+
+                    while (!canSmokeNow(smokerId) && panel.running.get() && !Thread.currentThread().isInterrupted()) {
+                        panel.updateGraphSmokerWaitingCondition(smokerId);
+                        if (!sleepVisualization()) {
+                            locked = releaseLockSafely(locked);
+                            return;
+                        }
+                        canSmoke.await();
+                    }
+
+                    if (!panel.running.get() || Thread.currentThread().isInterrupted()) {
+                        locked = releaseLockSafely(locked);
+                        break;
+                    }
+
+                    panel.i1 = null;
+                    panel.i2 = null;
+                    panel.activeSmoker = smokerId;
+                    panel.sstate[smokerId] = SState.ARMANDO;
+                    panel.updateGraphSmokerTakingCondition(smokerId);
+                    if (!sleepVisualization()) {
+                        locked = releaseLockSafely(locked);
+                        break;
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } finally {
+                    locked = releaseLockSafely(locked);
+                }
+
+                if (!sleepRand(500, 900)) {
+                    break;
+                }
+
+                panel.sstate[smokerId] = SState.FUMANDO;
+                if (!sleepRand(800, 1400)) {
+                    break;
+                }
+
+                boolean finishLocked = false;
+                try {
+                    monitorLock.lockInterruptibly();
+                    finishLocked = true;
+
+                    panel.sstate[smokerId] = SState.ESPERANDO;
+                    panel.activeSmoker = -1;
+                    panel.updateGraphSmokerSignalingCondition();
+                    tableEmpty.signal();
+                    if (!sleepVisualization()) {
+                        finishLocked = releaseLockSafely(finishLocked);
+                        break;
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } finally {
+                    finishLocked = releaseLockSafely(finishLocked);
+                }
+
+                panel.updateGraphSmokerIdleCondition(smokerId);
+                if (!sleepVisualization()) {
+                    break;
+                }
+            }
+        } finally {
+            panel.sstate[smokerId] = SState.ESPERANDO;
+            panel.updateGraphSmokerIdleCondition(smokerId);
+        }
+    }
+
     private boolean canSmokeNow(int me) {
-        return (me == 0 && pairIs(Ing.PAPEL, Ing.CERILLOS)) ||
-               (me == 1 && pairIs(Ing.TABACO, Ing.CERILLOS)) ||
-               (me == 2 && pairIs(Ing.TABACO, Ing.PAPEL));
+        return (me == 0 && pairIs(Ing.PAPEL, Ing.CERILLOS))
+                || (me == 1 && pairIs(Ing.TABACO, Ing.CERILLOS))
+                || (me == 2 && pairIs(Ing.TABACO, Ing.PAPEL));
     }
 
     private boolean pairIs(Ing a, Ing b) {
         return (panel.i1 == a && panel.i2 == b) || (panel.i1 == b && panel.i2 == a);
     }
-    
-    private void putRandomPair() {
-        int pick = (int) (Math.random() * 3);
-        switch (pick) {
-            case 0 -> { panel.i1 = Ing.PAPEL; panel.i2 = Ing.CERILLOS; }
-            case 1 -> { panel.i1 = Ing.TABACO; panel.i2 = Ing.CERILLOS; }
-            default -> { panel.i1 = Ing.TABACO; panel.i2 = Ing.PAPEL; }
-        }
+
+    private Ing[] pickRandomPair() {
+        int pick = rnd(3);
+        return switch (pick) {
+            case 0 -> new Ing[]{Ing.PAPEL, Ing.CERILLOS};
+            case 1 -> new Ing[]{Ing.TABACO, Ing.CERILLOS};
+            default -> new Ing[]{Ing.TABACO, Ing.PAPEL};
+        };
     }
-    
-    private void sleepRand(int a, int b) {
+
+    private boolean sleepVisualization() {
+        if (!panel.running.get()) {
+            return false;
+        }
         try {
-            Thread.sleep(a + (int) (Math.random() * (b - a)));
+            Thread.sleep(VISUALIZATION_DELAY);
+            return panel.running.get() && !Thread.currentThread().isInterrupted();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            return false;
         }
+    }
+
+    private boolean sleepRand(int min, int max) {
+        if (!panel.running.get()) {
+            return false;
+        }
+        int span = Math.max(0, max - min);
+        int duration = min + rnd(span + 1);
+        try {
+            Thread.sleep(duration);
+            return panel.running.get() && !Thread.currentThread().isInterrupted();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private boolean releaseLockSafely(boolean locked) {
+        if (locked) {
+            monitorLock.unlock();
+            return false;
+        }
+        return locked;
+    }
+
+    private int rnd(int bound) {
+        if (bound <= 0) {
+            return 0;
+        }
+        return (int) (Math.random() * bound);
     }
 }

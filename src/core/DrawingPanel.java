@@ -409,6 +409,27 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         removeConnection("R_Table_Smokers", smokerLabel);
     }
 
+    private synchronized void clearSmokersConditionAgentLinks() {
+        removeConnection("Agent", "R_Lock_Smokers");
+        removeConnection("R_Lock_Smokers", "Agent");
+        removeConnection("Agent", "Cond_Smokers");
+        removeConnection("Cond_Smokers", "Agent");
+        removeConnection("Agent", "R_Table_Smokers");
+        removeConnection("R_Table_Smokers", "Agent");
+    }
+
+    private synchronized void clearSmokersConditionSmokerLinks(String smokerLabel) {
+        if (smokerLabel == null) {
+            return;
+        }
+        removeConnection(smokerLabel, "R_Lock_Smokers");
+        removeConnection("R_Lock_Smokers", smokerLabel);
+        removeConnection(smokerLabel, "Cond_Smokers");
+        removeConnection("Cond_Smokers", smokerLabel);
+        removeConnection(smokerLabel, "R_Table_Smokers");
+        removeConnection("R_Table_Smokers", smokerLabel);
+    }
+
     private synchronized void clearSleepingBarberBarrierLinks(String processLabel) {
         if (processLabel == null) {
             return;
@@ -1461,6 +1482,28 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         SwingUtilities.invokeLater(this::repaint);
     }
 
+    public synchronized void setupSmokersGraph_Condition() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int lockY = centerY - (int) (height * 0.18);
+        int condY = centerY;
+        int tableY = centerY + (int) (height * 0.08);
+        int smokersY = centerY + (int) (height * 0.26);
+        int smokerOffset = (int) (width * 0.28);
+
+        addNodeIfNotExists("Agent", NodeType.PROCESO, centerX, lockY - (int) (height * 0.12));
+        addNodeIfNotExists("Smoker_Tabaco", NodeType.PROCESO, centerX - smokerOffset, smokersY);
+        addNodeIfNotExists("Smoker_Papel", NodeType.PROCESO, centerX, smokersY);
+        addNodeIfNotExists("Smoker_Cerillos", NodeType.PROCESO, centerX + smokerOffset, smokersY);
+        addNodeIfNotExists("R_Lock_Smokers", NodeType.RECURSO, centerX - (int) (width * 0.2), lockY);
+        addNodeIfNotExists("Cond_Smokers", NodeType.RECURSO, centerX + (int) (width * 0.2), condY);
+        addNodeIfNotExists("R_Table_Smokers", NodeType.RECURSO, centerX, tableY);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
     public synchronized void showAgentRequestingLock_Smokers() {
         clearSmokersMutexLinks("Agent");
         addConnectionIfNotExists("Agent", "R_Mutex_Smokers", "Solicitud");
@@ -1575,6 +1618,67 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         String semaphoreLabel = smokerSemaphoreLabel(smokerId);
         clearSmokersSemaphoreSmokerLinks(nodeLabel, semaphoreLabel);
         System.out.println("GRAPH SMOKERS SEM: " + nodeLabel + " inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentRequestingCondition_Smokers() {
+        clearSmokersConditionAgentLinks();
+        addConnectionIfNotExists("Agent", "R_Lock_Smokers", "Solicitud");
+        System.out.println("GRAPH SMOKERS COND: Agent solicita R_Lock_Smokers");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentPlacingCondition_Smokers(String ingredientsLabel) {
+        clearSmokersConditionAgentLinks();
+        addConnectionIfNotExists("R_Lock_Smokers", "Agent", "Dentro");
+        if (ingredientsLabel != null && !ingredientsLabel.isEmpty()) {
+            addConnectionIfNotExists("Agent", "R_Table_Smokers", ingredientsLabel);
+        }
+        System.out.println("GRAPH SMOKERS COND: Agent coloca " + (ingredientsLabel == null ? "" : ingredientsLabel));
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentSignalingCondition_Smokers() {
+        clearSmokersConditionAgentLinks();
+        addConnectionIfNotExists("R_Lock_Smokers", "Agent", "Dentro");
+        addConnectionIfNotExists("Agent", "Cond_Smokers", "Signal");
+        System.out.println("GRAPH SMOKERS COND: Agent signal Cond_Smokers");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showAgentIdleCondition_Smokers() {
+        clearSmokersConditionAgentLinks();
+        System.out.println("GRAPH SMOKERS COND: Agent inactivo");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerWaitingCondition_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        clearSmokersConditionSmokerLinks(nodeLabel);
+        addConnectionIfNotExists(nodeLabel, "Cond_Smokers", "Wait");
+        System.out.println("GRAPH SMOKERS COND: " + nodeLabel + " espera Cond_Smokers");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerTakingCondition_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        clearSmokersConditionSmokerLinks(nodeLabel);
+        addConnectionIfNotExists("R_Lock_Smokers", nodeLabel, "Asignado");
+        addConnectionIfNotExists(nodeLabel, "R_Table_Smokers", "Toma");
+        System.out.println("GRAPH SMOKERS COND: " + nodeLabel + " toma ingredientes");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerSignalingCondition_Smokers() {
+        addConnectionIfNotExists("Cond_Smokers", "Agent", "Signal");
+        System.out.println("GRAPH SMOKERS COND: Cond_Smokers -> Agent");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showSmokerIdleCondition_Smokers(int smokerId) {
+        String nodeLabel = smokerNodeLabel(smokerId);
+        clearSmokersConditionSmokerLinks(nodeLabel);
+        System.out.println("GRAPH SMOKERS COND: " + nodeLabel + " inactivo");
         SwingUtilities.invokeLater(this::repaint);
     }
 
