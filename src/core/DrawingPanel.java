@@ -13,6 +13,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeSet;
 
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
+import org.jfree.data.xy.XYDataset;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
+
 public class DrawingPanel extends JPanel implements MouseListener, MouseMotionListener {
 
     volatile GraphData data = new GraphData();
@@ -30,9 +39,37 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     private int nextReaderSlotIndex = 0;
     private int nextWriterSlotIndex = 0;
     private static final int RW_ROWS_PER_COLUMN = 5;
+    private static final double CHART_HEIGHT_RATIO = 0.32;
+    private static final int MIN_CHART_HEIGHT = 180;
+
+    public enum ChartKind {
+        ACORDEON("Acordeón", Color.RED),
+        CARROUSEL("Carrusel", new Color(18, 130, 43)),
+        SCROLL("Scroll", new Color(22, 91, 191));
+
+        private final String displayName;
+        private final Color lineColor;
+
+        ChartKind(String displayName, Color lineColor) {
+            this.displayName = displayName;
+            this.lineColor = lineColor;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+
+        public Color getLineColor() {
+            return lineColor;
+        }
+    }
+
+    private ChartPanel chartPanel;
+    private ChartKind currentChartKind = null;
 
     DrawingPanel() {
         // ... (código del constructor igual que antes) ...
+        setLayout(null);
         setBackground(Color.WHITE);
         JMenuItem crearProceso = new JMenuItem("Proceso");
         crearProceso.addActionListener(e -> createNode(NodeType.PROCESO, createAt.x, createAt.y));
@@ -126,6 +163,11 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             currentData.nextId = this.data.nextId;
             currentData.nextProceso = this.data.nextProceso;
             currentData.nextRecurso = this.data.nextRecurso;
+        }
+
+        int reservedHeight = getReservedChartHeight();
+        if (reservedHeight > 0) {
+            g2.setClip(0, 0, getWidth(), Math.max(0, getHeight() - reservedHeight));
         }
         for (Connection c : currentData.connections) {
             if (c == null) {
@@ -255,6 +297,111 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         int nodeX = isReader ? baseX - column * columnSpacing : baseX + column * columnSpacing;
         int nodeY = startY + row * spacingY;
         return new Point(nodeX, nodeY);
+    }
+
+    @Override
+    public void doLayout() {
+        super.doLayout();
+        if (chartPanel == null) {
+            return;
+        }
+        if (chartPanel.isVisible()) {
+            int height = (int) Math.round(getHeight() * CHART_HEIGHT_RATIO);
+            height = Math.max(MIN_CHART_HEIGHT, height);
+            height = Math.min(height, Math.max(0, getHeight()));
+            int y = getHeight() - height;
+            chartPanel.setBounds(0, Math.max(0, y), getWidth(), Math.max(0, height));
+        } else {
+            chartPanel.setBounds(0, getHeight(), getWidth(), 0);
+        }
+    }
+
+    private int getReservedChartHeight() {
+        if (chartPanel != null && chartPanel.isVisible()) {
+            int h = chartPanel.getHeight();
+            if (h <= 0) {
+                h = (int) Math.round(getHeight() * CHART_HEIGHT_RATIO);
+            }
+            h = Math.max(MIN_CHART_HEIGHT, h);
+            return Math.min(h, Math.max(0, getHeight()));
+        }
+        return 0;
+    }
+
+    public void showSampleChart(ChartKind kind) {
+        if (kind == null) {
+            hideChart();
+            return;
+        }
+        SwingUtilities.invokeLater(() -> {
+            JFreeChart chart = buildSampleChart(kind);
+            if (chartPanel == null) {
+                chartPanel = new ChartPanel(chart);
+                chartPanel.setMouseWheelEnabled(false);
+                chartPanel.setPopupMenu(null);
+                chartPanel.setDomainZoomable(false);
+                chartPanel.setRangeZoomable(false);
+                chartPanel.setOpaque(true);
+                chartPanel.setBackground(Color.WHITE);
+                add(chartPanel);
+            } else {
+                chartPanel.setChart(chart);
+            }
+            currentChartKind = kind;
+            chartPanel.setVisible(true);
+            revalidate();
+            repaint();
+        });
+    }
+
+    public void hideChart() {
+        if (chartPanel == null) {
+            return;
+        }
+        SwingUtilities.invokeLater(() -> {
+            chartPanel.setVisible(false);
+            currentChartKind = null;
+            revalidate();
+            repaint();
+        });
+    }
+
+    private JFreeChart buildSampleChart(ChartKind kind) {
+        XYDataset dataset = buildSampleDataset(kind);
+        JFreeChart chart = ChartFactory.createXYLineChart(
+                "Vista " + kind.getDisplayName(),
+                "Tiempo",
+                "Valor",
+                dataset
+        );
+        chart.setBackgroundPaint(Color.WHITE);
+        XYPlot plot = chart.getXYPlot();
+        plot.setBackgroundPaint(new Color(247, 247, 247));
+        plot.setOutlinePaint(new Color(190, 190, 190));
+        plot.setDomainGridlinePaint(new Color(210, 210, 210));
+        plot.setRangeGridlinePaint(new Color(210, 210, 210));
+        if (plot.getRenderer() instanceof XYLineAndShapeRenderer renderer) {
+            renderer.setSeriesPaint(0, kind.getLineColor());
+            renderer.setSeriesStroke(0, new BasicStroke(2.4f));
+            renderer.setDefaultShapesVisible(false);
+        }
+        return chart;
+    }
+
+    private XYDataset buildSampleDataset(ChartKind kind) {
+        XYSeries series = new XYSeries(kind.getDisplayName());
+        for (int i = 0; i <= 40; i++) {
+            double x = i / 4.0;
+            double value = switch (kind) {
+                case ACORDEON -> Math.sin(x) * 4 + 12;
+                case CARROUSEL -> Math.cos(x * 0.7) * 3 + 9;
+                case SCROLL -> Math.log1p(x) * 2.5 + 7;
+            };
+            series.add(x, value);
+        }
+        XYSeriesCollection collection = new XYSeriesCollection();
+        collection.addSeries(series);
+        return collection;
     }
 
     private synchronized Optional<Integer> findNodeIdByLabel(String label) {

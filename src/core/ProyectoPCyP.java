@@ -18,6 +18,7 @@ public class ProyectoPCyP extends JFrame {
     // ===== Menús =====
     private JMenuItem mutex, semaforos, varCon, monitores, barreras;
     private JMenuItem prodConsum, cenaFilosofos, barberoDormilon, fumadores, lectoresEscritores;
+    private JMenuItem graficaAcordeon, graficaCarrusel, graficaScroll;
 
     // ===== UI general =====
     private final JPanel leftPanel;
@@ -89,9 +90,18 @@ public class ProyectoPCyP extends JFrame {
         problemasMenu.add(fumadores);
         problemasMenu.add(lectoresEscritores);
 
+        JMenu graficaMenu = new JMenu("Gráfica");
+        graficaAcordeon = new JMenuItem("Acordeón");
+        graficaCarrusel = new JMenuItem("Carrusel");
+        graficaScroll = new JMenuItem("Scroll");
+        graficaMenu.add(graficaAcordeon);
+        graficaMenu.add(graficaCarrusel);
+        graficaMenu.add(graficaScroll);
+
         barra.add(archivo);
         barra.add(synch);
         barra.add(problemasMenu);
+        barra.add(graficaMenu);
         setJMenuBar(barra);
 
         // Acciones Archivo
@@ -124,6 +134,11 @@ public class ProyectoPCyP extends JFrame {
         varCon.addActionListener(e -> selectMethod(SyncMethod.VAR_COND));
         monitores.addActionListener(e -> selectMethod(SyncMethod.MONITORS)); // <-- LÍNEA MODIFICADA
         barreras.addActionListener(e -> selectMethod(SyncMethod.BARRIERS)); // <-- LÍNEA MODIFICADA
+
+        // ---- Menú Gráfica ----
+        graficaAcordeon.addActionListener(e -> drawing.showSampleChart(DrawingPanel.ChartKind.ACORDEON));
+        graficaCarrusel.addActionListener(e -> drawing.showSampleChart(DrawingPanel.ChartKind.CARROUSEL));
+        graficaScroll.addActionListener(e -> drawing.showSampleChart(DrawingPanel.ChartKind.SCROLL));
     }
 
     private void methodNotImplementedYet(String name) {
