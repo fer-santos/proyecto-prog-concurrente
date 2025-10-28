@@ -21,6 +21,8 @@ import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
+import javax.swing.Timer;
+import java.util.Random;
 
 public class DrawingPanel extends JPanel implements MouseListener, MouseMotionListener {
 
@@ -41,6 +43,8 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     private static final int RW_ROWS_PER_COLUMN = 5;
     private static final double CHART_HEIGHT_RATIO = 0.32;
     private static final int MIN_CHART_HEIGHT = 180;
+    private static final int CHART_MAX_POINTS = 200;
+    private static final double CHART_STEP = 0.25;
 
     public enum ChartKind {
         ACORDEON("Acordeón", Color.RED),
@@ -66,6 +70,10 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
 
     private ChartPanel chartPanel;
     private ChartKind currentChartKind = null;
+    private Timer chartTimer;
+    private XYSeries dynamicSeries;
+    private double chartXCursor = 0.0;
+    private final Random chartRandom = new Random();
 
     DrawingPanel() {
         // ... (código del constructor igual que antes) ...
@@ -334,7 +342,9 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             return;
         }
         SwingUtilities.invokeLater(() -> {
-            JFreeChart chart = buildSampleChart(kind);
+            stopChartTimer();
+            XYDataset dataset = buildDynamicDataset(kind);
+            JFreeChart chart = buildSampleChart(kind, dataset);
             if (chartPanel == null) {
                 chartPanel = new ChartPanel(chart);
                 chartPanel.setMouseWheelEnabled(false);
@@ -349,6 +359,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             }
             currentChartKind = kind;
             chartPanel.setVisible(true);
+            startChartTimer(kind);
             revalidate();
             repaint();
         });
@@ -359,6 +370,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             return;
         }
         SwingUtilities.invokeLater(() -> {
+            stopChartTimer();
             chartPanel.setVisible(false);
             currentChartKind = null;
             revalidate();
@@ -366,8 +378,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         });
     }
 
-    private JFreeChart buildSampleChart(ChartKind kind) {
-        XYDataset dataset = buildSampleDataset(kind);
+    private JFreeChart buildSampleChart(ChartKind kind, XYDataset dataset) {
         JFreeChart chart = ChartFactory.createXYLineChart(
                 "" + kind.getDisplayName(),
                 "x",
@@ -388,20 +399,53 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         return chart;
     }
 
-    private XYDataset buildSampleDataset(ChartKind kind) {
-        XYSeries series = new XYSeries(kind.getDisplayName());
-        for (int i = 0; i <= 40; i++) {
-            double x = i / 4.0;
-            double value = switch (kind) {
-                case ACORDEON -> Math.sin(x) * 4 + 12;
-                case CARROUSEL -> Math.cos(x * 0.7) * 3 + 9;
-                case SCROLL -> Math.log1p(x) * 2.5 + 7;
-            };
-            series.add(x, value);
+    private XYDataset buildDynamicDataset(ChartKind kind) {
+        dynamicSeries = new XYSeries(kind.getDisplayName());
+        chartXCursor = 0.0;
+        int warmupPoints = 48;
+        for (int i = 0; i < warmupPoints; i++) {
+            double x = i * CHART_STEP;
+            double value = computeChartValue(kind, x);
+            dynamicSeries.add(x, value);
+            chartXCursor = x;
         }
         XYSeriesCollection collection = new XYSeriesCollection();
-        collection.addSeries(series);
+        collection.addSeries(dynamicSeries);
         return collection;
+    }
+
+    private void startChartTimer(ChartKind kind) {
+        if (dynamicSeries == null) {
+            return;
+        }
+        stopChartTimer();
+        chartTimer = new Timer(420, e -> {
+            chartXCursor += CHART_STEP;
+            double value = computeChartValue(kind, chartXCursor);
+            dynamicSeries.add(chartXCursor, value);
+            while (dynamicSeries.getItemCount() > CHART_MAX_POINTS) {
+                dynamicSeries.remove(0);
+            }
+        });
+        chartTimer.start();
+    }
+
+    private void stopChartTimer() {
+        if (chartTimer != null) {
+            chartTimer.stop();
+            chartTimer = null;
+        }
+    }
+
+    private double computeChartValue(ChartKind kind, double x) {
+        double base = switch (kind) {
+            case ACORDEON -> Math.sin(x * 0.9) * 4.2 + 12.5;
+            case CARROUSEL -> Math.cos(x * 0.7) * 3.6 + 9.5 + Math.sin(x * 0.18) * 1.1;
+            case SCROLL -> Math.log1p(x) * 2.6 + 6.8 + Math.sin(x * 0.33) * 1.9;
+        };
+        double noise = chartRandom.nextGaussian() * 0.35;
+        double value = base + noise;
+        return Math.max(0.1, value);
     }
 
     private synchronized Optional<Integer> findNodeIdByLabel(String label) {
