@@ -411,6 +411,14 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
                 chartWrapper.add(chartScrollPane, BorderLayout.CENTER);
                 chartWrapper.add(chartLegendContainer, BorderLayout.SOUTH);
                 chartComponent = chartWrapper;
+            } else if (kind == ChartKind.CARROUSEL) {
+                chartWrapper = null;
+                chartTitleContainer = null;
+                chartLegendContainer = null;
+                chartTitleLabel = null;
+                chartLegendLabel = null;
+                chartScrollPane = null;
+                chartComponent = chartPanel;
             } else {
                 chartPanel.setBorder(BorderFactory.createEmptyBorder());
                 chartPanel.setPreferredSize(null);
@@ -472,7 +480,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             carouselDomainAxis = plot.getDomainAxis();
             carouselDomainAxis.setAutoRange(false);
             carouselDomainAxis.setLowerMargin(0.02);
-            carouselDomainAxis.setUpperMargin(0.15);
+            carouselDomainAxis.setUpperMargin(0.02);
             accordionDomainAxis = null;
         } else {
             accordionDomainAxis = null;
@@ -1971,6 +1979,77 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         SwingUtilities.invokeLater(this::repaint);
     }
 
+    public synchronized void setupPhilosophersGraph_DeadlockDemo() {
+        setupPhilosophersGraph_ForkDemoInternal();
+    }
+
+    public synchronized void setupPhilosophersGraph_HoareDemo() {
+        setupPhilosophersGraph_ForkDemoInternal();
+    }
+
+    private void setupPhilosophersGraph_ForkDemoInternal() {
+        clearGraphInternal();
+        int width = getWidth() > 0 ? getWidth() : 600;
+        int height = getHeight() > 0 ? getHeight() : 400;
+        int centerX = width / 2;
+        int centerY = height / 2;
+        int philosophers = 5;
+        int radius = (int) (Math.min(width, height) * 0.33);
+        double step = 2 * Math.PI / philosophers;
+        for (int i = 0; i < philosophers; i++) {
+            double ang = -Math.PI / 2 + i * step;
+            int px = centerX + (int) Math.round(Math.cos(ang) * radius);
+            int py = centerY + (int) Math.round(Math.sin(ang) * radius);
+            addNodeIfNotExists("P" + i, NodeType.PROCESO, px, py);
+        }
+        int forkRadius = (int) (radius * 1.18);
+        for (int i = 0; i < philosophers; i++) {
+            double ang = -Math.PI / 2 + i * step + step / 2.0;
+            int fx = centerX + (int) Math.round(Math.cos(ang) * forkRadius);
+            int fy = centerY + (int) Math.round(Math.sin(ang) * forkRadius);
+            addNodeIfNotExists("F" + i, NodeType.RECURSO, fx, fy);
+        }
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherThinkingDemo(String philosopherLabel, String leftForkLabel, String rightForkLabel) {
+        clearForkLink(philosopherLabel, leftForkLabel);
+        clearForkLink(philosopherLabel, rightForkLabel);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherRequestingForkDemo(String philosopherLabel, String forkLabel) {
+        removeConnection(philosopherLabel, forkLabel);
+        addConnectionIfNotExists(philosopherLabel, forkLabel, "Solicitud");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherWaitingForkDemo(String philosopherLabel, String forkLabel) {
+        removeConnection(philosopherLabel, forkLabel);
+        addConnectionIfNotExists(philosopherLabel, forkLabel, "Esperando");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherHoldingForkDemo(String philosopherLabel, String forkLabel) {
+        clearForkLink(philosopherLabel, forkLabel);
+        addConnectionIfNotExists(forkLabel, philosopherLabel, "Asignado");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherEatingDemo(String philosopherLabel, String leftForkLabel, String rightForkLabel) {
+        clearForkLink(philosopherLabel, leftForkLabel);
+        clearForkLink(philosopherLabel, rightForkLabel);
+        addConnectionIfNotExists(leftForkLabel, philosopherLabel, "Uso");
+        addConnectionIfNotExists(rightForkLabel, philosopherLabel, "Uso");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showPhilosopherReleaseForksDemo(String philosopherLabel, String leftForkLabel, String rightForkLabel) {
+        clearForkLink(philosopherLabel, leftForkLabel);
+        clearForkLink(philosopherLabel, rightForkLabel);
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
     private String smokerNodeLabel(int smokerId) {
         switch (smokerId) {
             case 0:
@@ -2009,7 +2088,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         int tableX = centerX + (int) (width * 0.2);
         int offsetSmoker = (int) (width * 0.28);
 
-        addNodeIfNotExists("Agent", NodeType.PROCESO, centerX, agentY);
+        addNodeIfNotExists("Agente", NodeType.PROCESO, centerX, agentY);
         addNodeIfNotExists("Smoker_Tabaco", NodeType.PROCESO, centerX - offsetSmoker, smokersY);
         addNodeIfNotExists("Smoker_Papel", NodeType.PROCESO, centerX, smokersY);
         addNodeIfNotExists("Smoker_Cerillos", NodeType.PROCESO, centerX + offsetSmoker, smokersY);
@@ -2056,7 +2135,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         int smokersY = centerY + (int) (height * 0.26);
         int smokerOffset = (int) (width * 0.28);
 
-        addNodeIfNotExists("Agent", NodeType.PROCESO, centerX, lockY - (int) (height * 0.12));
+        addNodeIfNotExists("Agente", NodeType.PROCESO, centerX, lockY - (int) (height * 0.12));
         addNodeIfNotExists("Smoker_Tabaco", NodeType.PROCESO, centerX - smokerOffset, smokersY);
         addNodeIfNotExists("Smoker_Papel", NodeType.PROCESO, centerX, smokersY);
         addNodeIfNotExists("Smoker_Cerillos", NodeType.PROCESO, centerX + smokerOffset, smokersY);
@@ -2067,14 +2146,14 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     }
 
     public synchronized void showAgentRequestingLock_Smokers() {
-        clearSmokersMutexLinks("Agent");
+        clearSmokersMutexLinks("Agente");
         addConnectionIfNotExists("Agent", "R_Mutex_Smokers", "Solicitud");
         System.out.println("GRAPH SMOKERS MUTEX: Agent solicita R_Mutex_Smokers");
         SwingUtilities.invokeLater(this::repaint);
     }
 
     public synchronized void showAgentHoldingLock_Smokers(String ingredientsLabel) {
-        clearSmokersMutexLinks("Agent");
+        clearSmokersMutexLinks("Agente");
         addConnectionIfNotExists("R_Mutex_Smokers", "Agent", "Asignado");
         if (ingredientsLabel != null && !ingredientsLabel.isEmpty()) {
             addConnectionIfNotExists("Agent", "R_Table_Smokers", ingredientsLabel);
@@ -2084,7 +2163,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     }
 
     public synchronized void showAgentReleasingLock_Smokers() {
-        clearSmokersMutexLinks("Agent");
+        clearSmokersMutexLinks("Agente");
         System.out.println("GRAPH SMOKERS MUTEX: Agent libera R_Mutex_Smokers");
         SwingUtilities.invokeLater(this::repaint);
     }
@@ -2115,7 +2194,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
 
     public synchronized void showAgentWaitingSemaphore_Smokers() {
         clearSmokersSemaphoreAgentLinks();
-        addConnectionIfNotExists("Agent", "S_Agent_Smokers", "Espera");
+        addConnectionIfNotExists("Agente", "S_Agent_Smokers", "Espera");
         System.out.println("GRAPH SMOKERS SEM: Agent espera S_Agent_Smokers");
         SwingUtilities.invokeLater(this::repaint);
     }
@@ -2194,7 +2273,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         clearSmokersConditionAgentLinks();
         addConnectionIfNotExists("R_Lock_Smokers", "Agent", "Dentro");
         if (ingredientsLabel != null && !ingredientsLabel.isEmpty()) {
-            addConnectionIfNotExists("Agent", "R_Table_Smokers", ingredientsLabel);
+            addConnectionIfNotExists("Agente", "R_Table_Smokers", ingredientsLabel);
         }
         System.out.println("GRAPH SMOKERS COND: Agent coloca " + (ingredientsLabel == null ? "" : ingredientsLabel));
         SwingUtilities.invokeLater(this::repaint);

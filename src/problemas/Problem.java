@@ -1,5 +1,11 @@
 package problemas;
 
 public enum Problem {
-    NONE, PRODUCERS, PHILOSOPHERS, BARBER, SMOKERS, READERS_WRITERS
+    NONE,
+    PRODUCERS,
+    PHILOSOPHERS,
+    BARBER,
+    SMOKERS,
+    READERS_WRITERS,
+    DEADLOCK_DEMO
 }

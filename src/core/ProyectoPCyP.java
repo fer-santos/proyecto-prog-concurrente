@@ -18,6 +18,7 @@ public class ProyectoPCyP extends JFrame {
     // ===== Menús =====
     private JMenuItem mutex, semaforos, varCon, monitores, barreras;
     private JMenuItem prodConsum, cenaFilosofos, barberoDormilon, fumadores, lectoresEscritores;
+    private JMenuItem deadlockRun, deadlockEdit;
     private JMenuItem graficaAcordeon, graficaCarrusel, graficaScroll;
 
     // ===== UI general =====
@@ -90,7 +91,7 @@ public class ProyectoPCyP extends JFrame {
         problemasMenu.add(fumadores);
         problemasMenu.add(lectoresEscritores);
 
-        JMenu graficaMenu = new JMenu("Gráfica");
+    JMenu graficaMenu = new JMenu("Gráfica");
         graficaAcordeon = new JMenuItem("Acordeón");
         graficaCarrusel = new JMenuItem("Carrusel");
         graficaScroll = new JMenuItem("Scroll");
@@ -98,10 +99,17 @@ public class ProyectoPCyP extends JFrame {
         graficaMenu.add(graficaCarrusel);
         graficaMenu.add(graficaScroll);
 
+    JMenu deadlockMenu = new JMenu("Deadlock");
+    deadlockRun = new JMenuItem("Ejecutar");
+    deadlockEdit = new JMenuItem("Editar");
+    deadlockMenu.add(deadlockRun);
+    deadlockMenu.add(deadlockEdit);
+
         barra.add(archivo);
         barra.add(synch);
         barra.add(problemasMenu);
         barra.add(graficaMenu);
+    barra.add(deadlockMenu);
         setJMenuBar(barra);
 
         // Acciones Archivo
@@ -139,6 +147,10 @@ public class ProyectoPCyP extends JFrame {
         graficaAcordeon.addActionListener(e -> drawing.showSampleChart(DrawingPanel.ChartKind.ACORDEON));
         graficaCarrusel.addActionListener(e -> drawing.showSampleChart(DrawingPanel.ChartKind.CARROUSEL));
         graficaScroll.addActionListener(e -> drawing.showSampleChart(DrawingPanel.ChartKind.SCROLL));
+
+        // ---- Menú Deadlock ----
+        deadlockRun.addActionListener(e -> runDeadlockScenario(false));
+        deadlockEdit.addActionListener(e -> runDeadlockScenario(true));
     }
 
     private void methodNotImplementedYet(String name) {
@@ -191,6 +203,33 @@ public class ProyectoPCyP extends JFrame {
         }
         // El setup del grafo se hará dentro de startWith del SimPanel
         currentSim.startWith(method);
+    }
+
+    private void runDeadlockScenario(boolean preventDeadlock) {
+        PhilosophersSim philosophersSim;
+        if (currentSim instanceof PhilosophersSim existing) {
+            existing.stopSimulation();
+            philosophersSim = existing;
+        } else {
+            if (currentSim != null) {
+                currentSim.stopSimulation();
+            }
+            philosophersSim = new PhilosophersSim();
+            currentSim = philosophersSim;
+            currentSim.setDrawingPanel(this.drawing);
+        }
+
+        selectedProblem = Problem.DEADLOCK_DEMO;
+    philosophersSim.setDrawingPanel(this.drawing);
+
+        leftPanel.removeAll();
+        leftPanel.add(philosophersSim.getComponent(), BorderLayout.CENTER);
+        leftPanel.revalidate();
+        leftPanel.repaint();
+
+        philosophersSim.showSkeleton();
+        SyncMethod method = preventDeadlock ? SyncMethod.PHIL_HOARE : SyncMethod.PHIL_DEADLOCK;
+        philosophersSim.startWith(method);
     }
 
     private void saveToFile() {

@@ -73,15 +73,19 @@ public class PhilosophersSim extends JPanel implements SimPanel {
 
         // --- Logic for Title ---
         if (method == SyncMethod.MUTEX) {
-            methodTitle = "Mutex (1 a la vez)";
+            methodTitle = "Mutex";
         } else if (method == SyncMethod.SEMAPHORES) {
-            methodTitle = "Semáforos (Camarero)";
+            methodTitle = "Semáforo";
         } else if (method == SyncMethod.VAR_COND) {
             methodTitle = "Variable Condición";
         } else if (method == SyncMethod.MONITORS) {
             methodTitle = "Monitores";
         } else if (method == SyncMethod.BARRIERS) {
-            methodTitle = "Barreras (Propenso a Deadlock)";
+            methodTitle = "Barreras";
+        } else if (method == SyncMethod.PHIL_DEADLOCK) {
+            methodTitle = "Deadlock";
+        } else if (method == SyncMethod.PHIL_HOARE) {
+            methodTitle = "Solución";
         } else {
             methodTitle = "Desconocido";
         }
@@ -100,6 +104,10 @@ public class PhilosophersSim extends JPanel implements SimPanel {
                     drawingPanel.setupPhilosophersGraph_Monitor();
                 } else if (method == SyncMethod.BARRIERS) {
                     drawingPanel.setupPhilosophersGraph_Barrier();
+                } else if (method == SyncMethod.PHIL_DEADLOCK) {
+                    drawingPanel.setupPhilosophersGraph_DeadlockDemo();
+                } else if (method == SyncMethod.PHIL_HOARE) {
+                    drawingPanel.setupPhilosophersGraph_HoareDemo();
                 }
                 // Add setups for other methods later
                 // else if (method == SyncMethod.SEMAPHORES) { drawingPanel.setupPhilosophersGraph_Semaphore(); }
@@ -112,15 +120,19 @@ public class PhilosophersSim extends JPanel implements SimPanel {
         // --- Strategy Logic ---
         SynchronizationStrategy tempStrategy = null;
         if (method == SyncMethod.MUTEX) {
-            tempStrategy = new PhilosophersMutexStrategy(this); // Pass 'this'
+            tempStrategy = new PhilosophersMutexStrategy(this);
         } else if (method == SyncMethod.SEMAPHORES) {
-            tempStrategy = new PhilosophersSemaphoreStrategy(this); // Pass 'this'
+            tempStrategy = new PhilosophersSemaphoreStrategy(this);
         } else if (method == SyncMethod.VAR_COND) {
-            tempStrategy = new PhilosophersConditionStrategy(this); // Pass 'this'
+            tempStrategy = new PhilosophersConditionStrategy(this);
         } else if (method == SyncMethod.MONITORS) {
-            tempStrategy = new PhilosophersMonitorStrategy(this); // Pass 'this'
+            tempStrategy = new PhilosophersMonitorStrategy(this);
         } else if (method == SyncMethod.BARRIERS) {
-            tempStrategy = new PhilosophersBarrierStrategy(this); // Pass 'this'
+            tempStrategy = new PhilosophersBarrierStrategy(this);
+        } else if (method == SyncMethod.PHIL_DEADLOCK) {
+            tempStrategy = new PhilosophersDeadlockStrategy(this);
+        } else if (method == SyncMethod.PHIL_HOARE) {
+            tempStrategy = new PhilosophersHoareStrategy(this);
         }
 
         currentStrategy = tempStrategy;
@@ -328,6 +340,42 @@ public class PhilosophersSim extends JPanel implements SimPanel {
     public void updateGraphPhilosopherReleasingBarrier(int philosopherId, int leftFork, int rightFork) {
         if (drawingPanel != null && currentStrategy instanceof PhilosophersBarrierStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherReleasingBarrier("P" + philosopherId, "F" + leftFork, "F" + rightFork));
+        }
+    }
+
+    public void updateGraphPhilosopherThinkingDemo(int philosopherId, int leftFork, int rightFork) {
+        if (drawingPanel != null && (currentStrategy instanceof PhilosophersDeadlockStrategy || currentStrategy instanceof PhilosophersHoareStrategy)) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherThinkingDemo("P" + philosopherId, "F" + leftFork, "F" + rightFork));
+        }
+    }
+
+    public void updateGraphPhilosopherRequestingForkDemo(int philosopherId, int forkId) {
+        if (drawingPanel != null && (currentStrategy instanceof PhilosophersDeadlockStrategy || currentStrategy instanceof PhilosophersHoareStrategy)) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherRequestingForkDemo("P" + philosopherId, "F" + forkId));
+        }
+    }
+
+    public void updateGraphPhilosopherWaitingForkDemo(int philosopherId, int forkId) {
+        if (drawingPanel != null && currentStrategy instanceof PhilosophersDeadlockStrategy) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherWaitingForkDemo("P" + philosopherId, "F" + forkId));
+        }
+    }
+
+    public void updateGraphPhilosopherHoldingForkDemo(int philosopherId, int forkId) {
+        if (drawingPanel != null && (currentStrategy instanceof PhilosophersDeadlockStrategy || currentStrategy instanceof PhilosophersHoareStrategy)) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherHoldingForkDemo("P" + philosopherId, "F" + forkId));
+        }
+    }
+
+    public void updateGraphPhilosopherEatingDemo(int philosopherId, int leftFork, int rightFork) {
+        if (drawingPanel != null && (currentStrategy instanceof PhilosophersDeadlockStrategy || currentStrategy instanceof PhilosophersHoareStrategy)) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherEatingDemo("P" + philosopherId, "F" + leftFork, "F" + rightFork));
+        }
+    }
+
+    public void updateGraphPhilosopherReleasingForksDemo(int philosopherId, int leftFork, int rightFork) {
+        if (drawingPanel != null && (currentStrategy instanceof PhilosophersDeadlockStrategy || currentStrategy instanceof PhilosophersHoareStrategy)) {
+            SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherReleaseForksDemo("P" + philosopherId, "F" + leftFork, "F" + rightFork));
         }
     }
     // For other strategies, we'll need different update methods (e.g., requesting/holding individual forks)
