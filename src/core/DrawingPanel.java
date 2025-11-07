@@ -73,6 +73,12 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         }
     }
 
+    private static final Color PROCESS_NODE_FILL = new Color(0x00, 0x00, 0xDB);
+    private static final Color RESOURCE_NODE_FILL = new Color(0xFF, 0x0C, 0x3A);
+    private static final Color NODE_BORDER_COLOR = Color.BLACK;
+    private static final Color NODE_LABEL_COLOR = Color.WHITE;
+    private static final Color NODE_HIGHLIGHT_OVERLAY = new Color(255, 255, 255, 90);
+
     private ChartPanel chartPanel;
     private ChartKind currentChartKind = null;
     private Timer chartTimer;
@@ -3639,32 +3645,28 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         }
         int h = n.size / 2;
         if (n.type == NodeType.PROCESO) {
+            g2.setColor(PROCESS_NODE_FILL);
+            g2.fillOval(n.x - h, n.y - h, n.size, n.size);
             if (highlight) {
-                g2.setColor(new Color(0, 128, 255, 60));
-            } else {
-                g2.setColor(getBackground()); // Fondo para borrar highlight anterior
-            }
-            if (highlight) {
+                g2.setColor(NODE_HIGHLIGHT_OVERLAY);
                 g2.fillOval(n.x - h, n.y - h, n.size, n.size);
             }
-            g2.setColor(Color.BLACK);
+            g2.setColor(NODE_BORDER_COLOR);
             g2.drawOval(n.x - h, n.y - h, n.size, n.size);
         } else { // RECURSO
+            g2.setColor(RESOURCE_NODE_FILL);
+            g2.fillRect(n.x - h, n.y - h, n.size, n.size);
             if (highlight) {
-                g2.setColor(new Color(0, 128, 255, 60));
-            } else {
-                g2.setColor(getBackground());
-            }
-            if (highlight) {
+                g2.setColor(NODE_HIGHLIGHT_OVERLAY);
                 g2.fillRect(n.x - h, n.y - h, n.size, n.size);
             }
-            g2.setColor(Color.BLACK);
+            g2.setColor(NODE_BORDER_COLOR);
             g2.drawRect(n.x - h, n.y - h, n.size, n.size);
         }
         FontMetrics fm = g2.getFontMetrics();
         int tw = fm.stringWidth(n.label);
         int th = fm.getAscent();
-        g2.setColor(Color.BLACK); // Asegura color negro para etiqueta
+        g2.setColor(NODE_LABEL_COLOR);
         g2.drawString(n.label, n.x - tw / 2, n.y + th / 4);
     }
 
