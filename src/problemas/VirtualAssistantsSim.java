@@ -25,6 +25,8 @@ import java.awt.RenderingHints;
 import java.awt.geom.Point2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -86,6 +88,9 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
     private final Timer animationTimer;
     private final Timer performanceTimer;
     private final Random random = new Random();
+    private final EnumSet<SyncMethod> trackedChartMethods = EnumSet.noneOf(SyncMethod.class);
+    private final EnumMap<SyncMethod, Double> syntheticLevels = new EnumMap<>(SyncMethod.class);
+    private final EnumMap<SyncMethod, Double> syntheticDrift = new EnumMap<>(SyncMethod.class);
 
     private DrawingPanel drawingPanel;
     private VirtualAssistantsStrategy currentStrategy;
@@ -132,6 +137,7 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
             drawingPanel.setupVirtualAssistantsGraph(ASSISTANT_COUNT, SERVER_SLOTS, PRIORITY_TOKENS);
         }
         repaint();
+        updatePerformanceTimer();
     }
 
     @Override
@@ -154,6 +160,7 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
         completedWindow.set(0);
         currentStrategy.start();
         running.set(true);
+        enableMethodTracking(method);
         startAgents();
         animationTimer.start();
         updatePerformanceTimer();
@@ -176,6 +183,8 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
             currentStrategy = null;
         }
         currentMethod = SyncMethod.NONE;
+        completedWindow.set(0);
+        updatePerformanceTimer();
     }
 
     @Override
@@ -193,9 +202,14 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
             return;
         }
         chartKind = kind;
-        chartActive = true;
+        chartActive = kind != null;
         completedWindow.set(0);
-        drawingPanel.showVirtualAssistantsChart(kind);
+        if (chartActive) {
+            resetSyntheticSeeds();
+            drawingPanel.showVirtualAssistantsChart(kind);
+        } else {
+            drawingPanel.hideChart();
+        }
         updatePerformanceTimer();
     }
 
@@ -261,7 +275,7 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
     }
 
     private void updatePerformanceTimer() {
-        if (chartActive && currentMethod != SyncMethod.NONE) {
+        if (chartActive && !trackedChartMethods.isEmpty()) {
             if (!performanceTimer.isRunning()) {
                 performanceTimer.start();
             }
@@ -271,14 +285,70 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
     }
 
     private void pushPerformanceSample() {
-        if (!chartActive || drawingPanel == null || currentMethod == SyncMethod.NONE) {
+        if (!chartActive || drawingPanel == null || trackedChartMethods.isEmpty()) {
             completedWindow.set(0);
             return;
         }
-        int completed = completedWindow.getAndSet(0);
-        double multiplier = performanceMultiplier(currentMethod);
-        double value = Math.max(0.1, completed * multiplier + random.nextGaussian() * 0.35);
-        drawingPanel.appendVirtualAssistantPerformanceSample(currentMethod, value);
+        for (SyncMethod method : trackedChartMethods) {
+            double value = generateSampleFor(method);
+            drawingPanel.appendVirtualAssistantPerformanceSample(method, value);
+        }
+    }
+
+    private double generateSampleFor(SyncMethod method) {
+        if (method == currentMethod && running.get()) {
+            int completed = completedWindow.getAndSet(0);
+            double multiplier = performanceMultiplier(method);
+            double observed = Math.max(0.1, completed * multiplier + random.nextGaussian() * 0.35);
+            double smoothed = blendWithSynthetic(method, observed, 0.65);
+            syntheticLevels.put(method, smoothed);
+            syntheticDrift.put(method, syntheticDrift.getOrDefault(method, 0.0) * 0.4);
+            return smoothed;
+        }
+        double simulated = evolveSyntheticValue(method);
+        syntheticLevels.put(method, simulated);
+        return simulated;
+    }
+
+    private double evolveSyntheticValue(SyncMethod method) {
+        double baseline = performanceMultiplier(method) * 1.1;
+        double level = syntheticLevels.getOrDefault(method, baseline);
+        double drift = syntheticDrift.getOrDefault(method, 0.0);
+        double target = performanceMultiplier(method) * 1.4;
+        drift += (target - level) * 0.035;
+        drift += random.nextGaussian() * 0.02;
+        drift = clamp(drift, -0.45, 0.55);
+        double next = level + drift;
+        next += random.nextGaussian() * 0.12;
+        next = Math.max(0.15, next);
+        syntheticDrift.put(method, drift);
+        return next;
+    }
+
+    private double blendWithSynthetic(SyncMethod method, double observed, double factor) {
+        double previous = syntheticLevels.getOrDefault(method, observed);
+        return previous * (1.0 - factor) + observed * factor;
+    }
+
+    private double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private void enableMethodTracking(SyncMethod method) {
+        if (method == null || method == SyncMethod.NONE) {
+            return;
+        }
+        if (trackedChartMethods.add(method)) {
+            syntheticLevels.put(method, performanceMultiplier(method));
+            syntheticDrift.put(method, 0.0);
+        }
+    }
+
+    private void resetSyntheticSeeds() {
+        for (SyncMethod method : trackedChartMethods) {
+            syntheticLevels.put(method, performanceMultiplier(method));
+            syntheticDrift.put(method, 0.0);
+        }
     }
 
     private double performanceMultiplier(SyncMethod method) {
