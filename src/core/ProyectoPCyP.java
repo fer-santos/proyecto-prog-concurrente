@@ -230,7 +230,11 @@ public class ProyectoPCyP extends JFrame {
         }
 
         selectedProblem = Problem.DEADLOCK_DEMO;
-    philosophersSim.setDrawingPanel(this.drawing);
+        updateChartMenuAvailability();
+        if (drawing != null) {
+            drawing.hideChart();
+        }
+        philosophersSim.setDrawingPanel(this.drawing);
 
         leftPanel.removeAll();
         leftPanel.add(philosophersSim.getComponent(), BorderLayout.CENTER);

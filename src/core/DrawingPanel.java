@@ -6,8 +6,12 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.geom.Line2D;
+import java.awt.Rectangle;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -24,6 +28,8 @@ import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.chart.axis.ValueAxis;
 import javax.swing.Timer;
 import java.util.Random;
+
+import problemas.SyncMethod;
 
 public class DrawingPanel extends JPanel implements MouseListener, MouseMotionListener {
 
@@ -94,6 +100,25 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     private JLabel chartLegendLabel;
     private ValueAxis accordionDomainAxis;
     private ValueAxis carouselDomainAxis;
+    private enum ChartDataMode { NONE, SAMPLE, VIRTUAL_ASSISTANTS }
+    private ChartDataMode chartDataMode = ChartDataMode.NONE;
+    private XYSeriesCollection chartDataset;
+    private final EnumMap<SyncMethod, XYSeries> vaSeries = new EnumMap<>(SyncMethod.class);
+    private final EnumMap<SyncMethod, Double> vaXCursors = new EnumMap<>(SyncMethod.class);
+    private XYLineAndShapeRenderer chartRenderer;
+    private static final Map<SyncMethod, Color> VA_METHOD_COLORS = Map.of(
+            SyncMethod.MUTEX, new Color(0x66, 0x66, 0x66),
+            SyncMethod.SEMAPHORES, new Color(0xF5, 0x78, 0x3B),
+            SyncMethod.VAR_COND, new Color(0x98, 0x3E, 0xF4),
+            SyncMethod.MONITORS, new Color(0x14, 0xA0, 0x58),
+            SyncMethod.BARRIERS, new Color(0x0B, 0x7C, 0xC8)
+    );
+
+    private enum GraphAutoLayoutHint { NONE, VIRTUAL_ASSISTANTS }
+    private GraphAutoLayoutHint autoLayoutHint = GraphAutoLayoutHint.NONE;
+    private int autoVaAssistants = 0;
+    private int autoVaSlots = 0;
+    private int autoVaTokens = 0;
 
     DrawingPanel() {
         // ... (código del constructor igual que antes) ...
@@ -124,6 +149,12 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         nodeMenu.add(eliminar);
         addMouseListener(this);
         addMouseMotionListener(this);
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                applyAutoLayout();
+            }
+        });
     }
 
     // --- Métodos de manejo de grafo (igual que antes) ---
@@ -262,6 +293,10 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             data = new GraphData();
             resetReadersWritersSlots();
         }
+        autoLayoutHint = GraphAutoLayoutHint.NONE;
+        autoVaAssistants = 0;
+        autoVaSlots = 0;
+        autoVaTokens = 0;
     }
 
     private synchronized void resetReadersWritersSlots() {
@@ -359,88 +394,140 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         return 0;
     }
 
+    private Rectangle getGraphDrawingBounds() {
+        int width = Math.max(1, getWidth());
+        int totalHeight = Math.max(1, getHeight());
+        int reserved = getReservedChartHeight();
+        int availableHeight = Math.max(120, totalHeight - reserved - 12);
+        return new Rectangle(0, 0, width, availableHeight);
+    }
+
+    private void resetChartShell() {
+        stopChartTimer();
+        if (chartComponent != null) {
+            remove(chartComponent);
+            chartComponent = null;
+        }
+        chartPanel = null;
+        chartScrollPane = null;
+        chartWrapper = null;
+        chartTitleContainer = null;
+        chartLegendContainer = null;
+        chartTitleLabel = null;
+        chartLegendLabel = null;
+        accordionDomainAxis = null;
+        carouselDomainAxis = null;
+        chartRenderer = null;
+    }
+
     public void showSampleChart(ChartKind kind) {
         if (kind == null) {
             hideChart();
             return;
         }
         SwingUtilities.invokeLater(() -> {
-            stopChartTimer();
-            if (chartComponent != null) {
-                remove(chartComponent);
-                chartComponent = null;
-            }
-            if (chartScrollPane != null) {
-                chartScrollPane = null;
-            }
-            chartWrapper = null;
-            chartTitleContainer = null;
-            chartLegendContainer = null;
-            chartTitleLabel = null;
-            chartLegendLabel = null;
-            accordionDomainAxis = null;
-            carouselDomainAxis = null;
+            resetChartShell();
+            chartDataMode = ChartDataMode.SAMPLE;
+            vaSeries.clear();
+            vaXCursors.clear();
 
             XYDataset dataset = buildDynamicDataset(kind);
+            chartDataset = (XYSeriesCollection) dataset;
             JFreeChart chart = buildSampleChart(kind, dataset);
 
-            chartPanel = new ChartPanel(chart);
-            chartPanel.setMouseWheelEnabled(false);
-            chartPanel.setPopupMenu(null);
-            chartPanel.setDomainZoomable(false);
-            chartPanel.setRangeZoomable(false);
-            chartPanel.setOpaque(true);
-            chartPanel.setBackground(Color.WHITE);
+            mountChart(chart, kind, true, kind.getDisplayName(), kind.getLineColor(), false);
+            startChartTimer(kind);
+        });
+    }
 
-            if (kind == ChartKind.SCROLL) {
-                chart.setTitle((String) null);
-                if (chart.getLegend() != null) {
-                    chart.removeLegend();
-                }
-                chartPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 18, 0));
-                chartScrollPane = new JScrollPane(chartPanel, ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
-                chartScrollPane.setBorder(BorderFactory.createEmptyBorder());
-                chartScrollPane.setOpaque(false);
-                chartScrollPane.getViewport().setOpaque(false);
-                chartScrollPane.getHorizontalScrollBar().setUnitIncrement(24);
+    public void showVirtualAssistantsChart(ChartKind kind) {
+        if (kind == null) {
+            hideChart();
+            return;
+        }
+        SwingUtilities.invokeLater(() -> {
+            resetChartShell();
+            chartDataMode = ChartDataMode.VIRTUAL_ASSISTANTS;
+            dynamicSeries = null;
+            vaSeries.clear();
+            vaXCursors.clear();
+            chartDataset = new XYSeriesCollection();
+            chartXCursor = 0.0;
+            JFreeChart chart = buildVirtualAssistantsChart(kind, chartDataset);
+            mountChart(chart, kind, true, "Comparativa multi-núcleo", Color.DARK_GRAY, true);
+            updateVirtualAssistantSeriesColors();
+            applyAutoLayout();
+        });
+    }
 
+    private void mountChart(JFreeChart chart, ChartKind kind, boolean footerLegend, String legendText, Color legendColor, boolean keepPlotLegend) {
+        chartPanel = new ChartPanel(chart);
+        chartPanel.setMouseWheelEnabled(false);
+        chartPanel.setPopupMenu(null);
+        chartPanel.setDomainZoomable(false);
+        chartPanel.setRangeZoomable(false);
+        chartPanel.setOpaque(true);
+        chartPanel.setBackground(Color.WHITE);
+
+        if (kind == ChartKind.SCROLL) {
+            chart.setTitle((String) null);
+            if (!keepPlotLegend && chart.getLegend() != null) {
+                chart.removeLegend();
+            }
+            chartPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 18, 0));
+            chartScrollPane = new JScrollPane(chartPanel, ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
+            chartScrollPane.setBorder(BorderFactory.createEmptyBorder());
+            chartScrollPane.setOpaque(false);
+            chartScrollPane.getViewport().setOpaque(false);
+            chartScrollPane.getHorizontalScrollBar().setUnitIncrement(24);
+
+            chartWrapper = new JPanel(new BorderLayout());
+            chartWrapper.setOpaque(false);
+            chartTitleLabel = createTitleLabel(kind.getDisplayName());
+            chartTitleContainer = wrapLabel(chartTitleLabel, 8, 0, 4, 0);
+            chartWrapper.add(chartTitleContainer, BorderLayout.NORTH);
+            chartWrapper.add(chartScrollPane, BorderLayout.CENTER);
+            if (footerLegend) {
+                chartLegendLabel = createLegendLabel(legendText, legendColor);
+                chartLegendContainer = wrapLabel(chartLegendLabel, 8, 0, 10, 0);
+                chartWrapper.add(chartLegendContainer, BorderLayout.SOUTH);
+            }
+            chartComponent = chartWrapper;
+        } else if (kind == ChartKind.CARROUSEL) {
+            if (!keepPlotLegend && chart.getLegend() != null) {
+                chart.removeLegend();
+            }
+            chartPanel.setBorder(BorderFactory.createEmptyBorder());
+            chartComponent = chartPanel;
+        } else {
+            if (!keepPlotLegend && chart.getLegend() != null) {
+                chart.removeLegend();
+            }
+            chartPanel.setBorder(BorderFactory.createEmptyBorder());
+            if (footerLegend) {
                 chartWrapper = new JPanel(new BorderLayout());
                 chartWrapper.setOpaque(false);
-
                 chartTitleLabel = createTitleLabel(kind.getDisplayName());
-                chartLegendLabel = createLegendLabel(kind.getDisplayName(), kind.getLineColor());
-
-                chartTitleContainer = wrapLabel(chartTitleLabel, 8, 0, 4, 0);
-                chartLegendContainer = wrapLabel(chartLegendLabel, 8, 0, 10, 0);
-
+                chartLegendLabel = createLegendLabel(legendText, legendColor);
+                chartTitleContainer = wrapLabel(chartTitleLabel, 4, 0, 0, 0);
+                chartLegendContainer = wrapLabel(chartLegendLabel, 0, 0, 8, 0);
                 chartWrapper.add(chartTitleContainer, BorderLayout.NORTH);
-                chartWrapper.add(chartScrollPane, BorderLayout.CENTER);
+                chartWrapper.add(chartPanel, BorderLayout.CENTER);
                 chartWrapper.add(chartLegendContainer, BorderLayout.SOUTH);
                 chartComponent = chartWrapper;
-            } else if (kind == ChartKind.CARROUSEL) {
-                chartWrapper = null;
-                chartTitleContainer = null;
-                chartLegendContainer = null;
-                chartTitleLabel = null;
-                chartLegendLabel = null;
-                chartScrollPane = null;
-                chartComponent = chartPanel;
             } else {
-                chartPanel.setBorder(BorderFactory.createEmptyBorder());
-                chartPanel.setPreferredSize(null);
                 chartComponent = chartPanel;
             }
+        }
 
-            add(chartComponent);
-            currentChartKind = kind;
-            chartComponent.setVisible(true);
-            updateAccordionAxisBounds();
-            updateCarouselAxisBounds();
-            updateScrollPreferredSize();
-            startChartTimer(kind);
-            revalidate();
-            repaint();
-        });
+        add(chartComponent);
+        currentChartKind = kind;
+        chartComponent.setVisible(true);
+        updateAccordionAxisBounds();
+        updateCarouselAxisBounds();
+        updateScrollPreferredSize();
+        revalidate();
+        repaint();
     }
 
     public void hideChart() {
@@ -453,8 +540,13 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             currentChartKind = null;
             accordionDomainAxis = null;
             carouselDomainAxis = null;
+            chartDataMode = ChartDataMode.NONE;
+            chartDataset = null;
+            vaSeries.clear();
+            vaXCursors.clear();
             revalidate();
             repaint();
+            applyAutoLayout();
         });
     }
 
@@ -475,6 +567,45 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             renderer.setSeriesPaint(0, kind.getLineColor());
             renderer.setSeriesStroke(0, new BasicStroke(2.4f));
             renderer.setDefaultShapesVisible(false);
+            chartRenderer = renderer;
+        }
+        if (kind == ChartKind.ACORDEON) {
+            accordionDomainAxis = plot.getDomainAxis();
+            accordionDomainAxis.setAutoRange(false);
+            accordionDomainAxis.setLowerMargin(0.02);
+            accordionDomainAxis.setUpperMargin(0.02);
+            carouselDomainAxis = null;
+        } else if (kind == ChartKind.CARROUSEL) {
+            carouselDomainAxis = plot.getDomainAxis();
+            carouselDomainAxis.setAutoRange(false);
+            carouselDomainAxis.setLowerMargin(0.02);
+            carouselDomainAxis.setUpperMargin(0.02);
+            accordionDomainAxis = null;
+        } else {
+            accordionDomainAxis = null;
+            carouselDomainAxis = null;
+        }
+        return chart;
+    }
+
+    private JFreeChart buildVirtualAssistantsChart(ChartKind kind, XYDataset dataset) {
+        JFreeChart chart = ChartFactory.createXYLineChart(
+                "Rendimiento por método",
+                "Tiempo",
+                "Consultas procesadas",
+                dataset
+        );
+        chart.setBackgroundPaint(Color.WHITE);
+        XYPlot plot = chart.getXYPlot();
+        plot.setBackgroundPaint(new Color(244, 247, 250));
+        plot.setOutlinePaint(new Color(190, 190, 190));
+        plot.setDomainGridlinePaint(new Color(210, 210, 210));
+        plot.setRangeGridlinePaint(new Color(210, 210, 210));
+        if (plot.getRenderer() instanceof XYLineAndShapeRenderer renderer) {
+            renderer.setDefaultShapesVisible(false);
+            renderer.setAutoPopulateSeriesStroke(false);
+            renderer.setDefaultStroke(new BasicStroke(2.2f));
+            chartRenderer = renderer;
         }
         if (kind == ChartKind.ACORDEON) {
             accordionDomainAxis = plot.getDomainAxis();
@@ -558,6 +689,68 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         return Math.max(0.1, value);
     }
 
+    public synchronized void appendVirtualAssistantPerformanceSample(SyncMethod method, double value) {
+        if (chartDataMode != ChartDataMode.VIRTUAL_ASSISTANTS || chartDataset == null || method == null || method == SyncMethod.NONE) {
+            return;
+        }
+        XYSeries series = vaSeries.computeIfAbsent(method, this::createVirtualAssistantSeries);
+        double currentX = vaXCursors.getOrDefault(method, 0.0);
+        series.add(currentX, value);
+        vaXCursors.put(method, currentX + CHART_STEP);
+        trimVirtualAssistantSeries(series);
+        updateVirtualAssistantSeriesColors();
+        updateAccordionAxisBounds();
+        updateCarouselAxisBounds();
+        updateScrollPreferredSize();
+    }
+
+    private XYSeries createVirtualAssistantSeries(SyncMethod method) {
+        XYSeries s = new XYSeries(methodDisplayName(method));
+        chartDataset.addSeries(s);
+        vaXCursors.put(method, 0.0);
+        return s;
+    }
+
+    private void trimVirtualAssistantSeries(XYSeries series) {
+        if (currentChartKind == ChartKind.SCROLL) {
+            while (series.getItemCount() > CHART_SCROLL_MAX_POINTS) {
+                series.remove(0);
+            }
+        } else if (currentChartKind == ChartKind.CARROUSEL) {
+            while (series.getItemCount() > CHART_CARROUSEL_HISTORY_POINTS) {
+                series.remove(0);
+            }
+        }
+    }
+
+    private void updateVirtualAssistantSeriesColors() {
+        if (chartRenderer == null || chartDataset == null) {
+            return;
+        }
+        for (Map.Entry<SyncMethod, XYSeries> entry : vaSeries.entrySet()) {
+            SyncMethod method = entry.getKey();
+            XYSeries series = entry.getValue();
+            int index = chartDataset.indexOf(series.getKey());
+            if (index >= 0) {
+                Color color = VA_METHOD_COLORS.getOrDefault(method, Color.DARK_GRAY);
+                chartRenderer.setSeriesPaint(index, color);
+                chartRenderer.setSeriesStroke(index, new BasicStroke(2.2f));
+                chartRenderer.setSeriesShapesVisible(index, false);
+            }
+        }
+    }
+
+    private String methodDisplayName(SyncMethod method) {
+        return switch (method) {
+            case MUTEX -> "Mutex";
+            case SEMAPHORES -> "Semáforos";
+            case VAR_COND -> "Variable condición";
+            case MONITORS -> "Monitores";
+            case BARRIERS -> "Barreras";
+            default -> method.name();
+        };
+    }
+
     private JLabel createTitleLabel(String text) {
         JLabel label = new JLabel(text, SwingConstants.CENTER);
         label.setFont(label.getFont().deriveFont(Font.BOLD, 18f));
@@ -618,16 +811,54 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         }
     }
 
+    private double getDatasetMinX() {
+        if (chartDataset == null || chartDataset.getSeriesCount() == 0) {
+            return 0.0;
+        }
+        double min = Double.POSITIVE_INFINITY;
+        for (int i = 0; i < chartDataset.getSeriesCount(); i++) {
+            XYSeries s = chartDataset.getSeries(i);
+            if (s.getItemCount() == 0) {
+                continue;
+            }
+            min = Math.min(min, s.getMinX());
+        }
+        return min == Double.POSITIVE_INFINITY ? 0.0 : min;
+    }
+
+    private double getDatasetMaxX() {
+        if (chartDataset == null || chartDataset.getSeriesCount() == 0) {
+            return chartXCursor;
+        }
+        double max = Double.NEGATIVE_INFINITY;
+        for (int i = 0; i < chartDataset.getSeriesCount(); i++) {
+            XYSeries s = chartDataset.getSeries(i);
+            if (s.getItemCount() == 0) {
+                continue;
+            }
+            max = Math.max(max, s.getMaxX());
+        }
+        return max == Double.NEGATIVE_INFINITY ? 0.0 : max;
+    }
+
+    private int getMaxSeriesPointCount() {
+        if (chartDataset == null) {
+            return dynamicSeries != null ? dynamicSeries.getItemCount() : 0;
+        }
+        int max = 0;
+        for (int i = 0; i < chartDataset.getSeriesCount(); i++) {
+            XYSeries s = chartDataset.getSeries(i);
+            max = Math.max(max, s.getItemCount());
+        }
+        return max;
+    }
+
     private void updateAccordionAxisBounds() {
         if (currentChartKind != ChartKind.ACORDEON || accordionDomainAxis == null) {
             return;
         }
-        double min = 0.0;
-        double max = Math.max(chartXCursor, CHART_STEP);
-        if (dynamicSeries != null && dynamicSeries.getItemCount() > 0) {
-            min = Math.min(min, dynamicSeries.getMinX());
-            max = Math.max(max, dynamicSeries.getMaxX() + CHART_STEP);
-        }
+        double min = getDatasetMinX();
+        double max = Math.max(getDatasetMaxX(), CHART_STEP);
         if (max <= min) {
             max = min + 1.0;
         }
@@ -640,9 +871,8 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             return;
         }
         double max = Math.max(chartXCursor, CHART_CARROUSEL_WINDOW_WIDTH);
-        if (dynamicSeries != null && dynamicSeries.getItemCount() > 0) {
-            max = Math.max(max, dynamicSeries.getMaxX());
-        }
+        double datasetMax = getDatasetMaxX();
+        max = Math.max(max, datasetMax);
         double min = Math.max(0.0, max - CHART_CARROUSEL_WINDOW_WIDTH);
         carouselDomainAxis.setLowerBound(min);
         carouselDomainAxis.setUpperBound(max + CHART_STEP);
@@ -654,7 +884,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         }
         int viewportHeight = (int) Math.round(getHeight() * CHART_HEIGHT_RATIO);
         int height = Math.max(MIN_CHART_HEIGHT, viewportHeight > 0 ? viewportHeight : MIN_CHART_HEIGHT);
-        int pointCount = (dynamicSeries != null) ? dynamicSeries.getItemCount() : 0;
+        int pointCount = getMaxSeriesPointCount();
         int widthPerPoint = 14;
         int minWidth = Math.max(getWidth(), 600);
         int width = Math.max(minWidth, pointCount * widthPerPoint + 160);
@@ -693,6 +923,19 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             n.y = y;
             n.label = label;
             data.nodes.add(n);
+        }
+    }
+
+    private synchronized void moveNodeTo(String label, int x, int y) {
+        if (label == null || data == null || data.nodes == null) {
+            return;
+        }
+        for (ShapeNode node : data.nodes) {
+            if (node != null && label.equals(node.label)) {
+                node.x = x;
+                node.y = y;
+                return;
+            }
         }
     }
 
@@ -1038,6 +1281,101 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             c.kind = kind;
             data.connections.add(c);
         }
+    }
+
+    public synchronized void setupVirtualAssistantsGraph(int assistantCount, int slots, int tokens) {
+        clearGraphInternal();
+        autoLayoutHint = GraphAutoLayoutHint.VIRTUAL_ASSISTANTS;
+        autoVaAssistants = Math.max(1, assistantCount);
+        autoVaSlots = Math.max(1, slots);
+        autoVaTokens = Math.max(1, tokens);
+
+        for (int i = 0; i < autoVaAssistants; i++) {
+            addNodeIfNotExists("AV" + (i + 1), NodeType.PROCESO, 0, 0);
+        }
+        addNodeIfNotExists("Q_Alta", NodeType.RECURSO, 0, 0);
+        addNodeIfNotExists("Q_Baja", NodeType.RECURSO, 0, 0);
+        addNodeIfNotExists("R_Tokens", NodeType.RECURSO, 0, 0);
+        addNodeIfNotExists("R_Server", NodeType.RECURSO, 0, 0);
+        addNodeIfNotExists("R_Slots", NodeType.RECURSO, 0, 0);
+
+        layoutVirtualAssistantsGraph();
+    }
+
+    private void applyAutoLayout() {
+        if (autoLayoutHint == GraphAutoLayoutHint.VIRTUAL_ASSISTANTS) {
+            layoutVirtualAssistantsGraph();
+        }
+    }
+
+    private void layoutVirtualAssistantsGraph() {
+        synchronized (this) {
+            if (autoLayoutHint != GraphAutoLayoutHint.VIRTUAL_ASSISTANTS || data == null || data.nodes == null) {
+                return;
+            }
+            Rectangle bounds = getGraphDrawingBounds();
+            int width = Math.max(200, bounds.width);
+            int height = Math.max(150, bounds.height);
+            int topMargin = bounds.y + 50;
+            int bottomMargin = bounds.y + height - 50;
+            if (bottomMargin <= topMargin) {
+                bottomMargin = topMargin + 100;
+            }
+            int assistantCount = Math.max(1, autoVaAssistants);
+            int usableHeight = bottomMargin - topMargin;
+            int spacing = assistantCount == 1 ? 0 : Math.max(46, usableHeight / (assistantCount - 1));
+            int assistantX = bounds.x + (int) (width * 0.43);
+            int queueX = bounds.x + (int) (width * 0.18);
+            int tokenX = bounds.x + (int) (width * 0.60);
+            int serverX = bounds.x + (int) (width * 0.75);
+            int slotsX = bounds.x + (int) (width * 0.88);
+            int queueHighY = Math.max(bounds.y + 60, topMargin - 40);
+            int queueLowY = Math.min(bounds.y + height - 60, bottomMargin + 20);
+            int tokenY = Math.max(bounds.y + 60, topMargin - 80);
+            int serverY = bounds.y + height / 2;
+            int slotsY = Math.min(bounds.y + height - 40, serverY + 50);
+
+            for (int i = 0; i < assistantCount; i++) {
+                int offset = (assistantCount == 1) ? usableHeight / 2 : i * spacing;
+                int y = topMargin + offset;
+                moveNodeTo("AV" + (i + 1), assistantX, y);
+            }
+            moveNodeTo("Q_Alta", queueX, queueHighY);
+            moveNodeTo("Q_Baja", queueX, queueLowY);
+            moveNodeTo("R_Tokens", tokenX, tokenY);
+            moveNodeTo("R_Server", serverX, serverY);
+            moveNodeTo("R_Slots", slotsX, slotsY);
+        }
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showVirtualAssistantQueued(String assistantLabel, boolean highPriority) {
+        removeConnectionsInvolving(assistantLabel);
+        addConnectionIfNotExists(assistantLabel, highPriority ? "Q_Alta" : "Q_Baja", "Espera token");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showVirtualAssistantTokenGranted(String assistantLabel) {
+        removeConnectionsInvolving(assistantLabel);
+        addConnectionIfNotExists("R_Tokens", assistantLabel, "Token");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showVirtualAssistantRequestingSlot(String assistantLabel) {
+        removeConnectionsInvolving(assistantLabel);
+        addConnectionIfNotExists(assistantLabel, "R_Slots", "Solicita slot");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showVirtualAssistantProcessing(String assistantLabel) {
+        removeConnectionsInvolving(assistantLabel);
+        addConnectionIfNotExists("R_Server", assistantLabel, "Procesando");
+        SwingUtilities.invokeLater(this::repaint);
+    }
+
+    public synchronized void showVirtualAssistantFinished(String assistantLabel) {
+        removeConnectionsInvolving(assistantLabel);
+        SwingUtilities.invokeLater(this::repaint);
     }
 
     public synchronized void setupProducerConsumerGraph() {
