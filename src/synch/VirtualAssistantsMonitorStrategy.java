@@ -122,14 +122,16 @@ public class VirtualAssistantsMonitorStrategy extends VirtualAssistantsBaseStrat
         if (agent.isHighPriority()) {
             return highTokenQueue.peekFirst() == agent;
         }
-        return highTokenQueue.isEmpty() && (lowTokenQueue.peekFirst() == agent) && (consecutiveHighWins >= 2 || highSlotQueue.isEmpty());
+        return lowTokenQueue.peekFirst() == agent
+            && (highTokenQueue.isEmpty() || consecutiveHighWins >= 2);
     }
 
     private boolean eligibleForSlot(AssistantAgent agent) {
         if (agent.isHighPriority()) {
             return highSlotQueue.peekFirst() == agent;
         }
-        return highSlotQueue.isEmpty() && (lowSlotQueue.peekFirst() == agent) && (consecutiveHighWins >= 2 || highTokenQueue.isEmpty());
+        return lowSlotQueue.peekFirst() == agent
+            && (highSlotQueue.isEmpty() || consecutiveHighWins >= 2);
     }
 
     private void registerGrant(boolean highPriority) {
