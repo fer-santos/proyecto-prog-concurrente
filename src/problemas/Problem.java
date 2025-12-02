@@ -7,5 +7,6 @@ public enum Problem {
     BARBER,
     SMOKERS,
     READERS_WRITERS,
-    DEADLOCK_DEMO
+    DEADLOCK_DEMO,
+    VIRTUAL_ASSISTANTS
 }

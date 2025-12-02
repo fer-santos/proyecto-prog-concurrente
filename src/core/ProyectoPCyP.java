@@ -17,9 +17,10 @@ public class ProyectoPCyP extends JFrame {
 
     // ===== Menús =====
     private JMenuItem mutex, semaforos, varCon, monitores, barreras;
-    private JMenuItem prodConsum, cenaFilosofos, barberoDormilon, fumadores, lectoresEscritores;
+    private JMenuItem prodConsum, cenaFilosofos, barberoDormilon, fumadores, lectoresEscritores, asistentesVirtuales;
     private JMenuItem deadlockRun, deadlockEdit;
     private JMenuItem graficaAcordeon, graficaCarrusel, graficaScroll;
+    private JMenu graficaMenu;
 
     // ===== UI general =====
     private final JPanel leftPanel;
@@ -52,6 +53,7 @@ public class ProyectoPCyP extends JFrame {
         add(split, BorderLayout.CENTER);
 
         setupActions();
+        updateChartMenuAvailability();
     }
 
     private void setupMenus() {
@@ -85,13 +87,15 @@ public class ProyectoPCyP extends JFrame {
         barberoDormilon = new JMenuItem("Barbero Dormilón");
         fumadores = new JMenuItem("Fumadores");
         lectoresEscritores = new JMenuItem("Lectores-Escritores");
+        asistentesVirtuales = new JMenuItem("Asistentes Virtuales");
         problemasMenu.add(prodConsum);
         problemasMenu.add(cenaFilosofos);
         problemasMenu.add(barberoDormilon);
         problemasMenu.add(fumadores);
         problemasMenu.add(lectoresEscritores);
+        problemasMenu.add(asistentesVirtuales);
 
-    JMenu graficaMenu = new JMenu("Gráfica");
+    graficaMenu = new JMenu("Gráfica");
         graficaAcordeon = new JMenuItem("Acordeón");
         graficaCarrusel = new JMenuItem("Carrusel");
         graficaScroll = new JMenuItem("Scroll");
@@ -135,6 +139,7 @@ public class ProyectoPCyP extends JFrame {
         barberoDormilon.addActionListener(e -> selectProblem(Problem.BARBER, new SleepingBarberSim()));
         fumadores.addActionListener(e -> selectProblem(Problem.SMOKERS, new SmokersSim()));
         lectoresEscritores.addActionListener(e -> selectProblem(Problem.READERS_WRITERS, new ReadersWritersSim()));
+        asistentesVirtuales.addActionListener(e -> selectProblem(Problem.VIRTUAL_ASSISTANTS, new VirtualAssistantsSim()));
 
         // ---- Menú Synch ----
         mutex.addActionListener(e -> selectMethod(SyncMethod.MUTEX));
@@ -144,9 +149,9 @@ public class ProyectoPCyP extends JFrame {
         barreras.addActionListener(e -> selectMethod(SyncMethod.BARRIERS)); // <-- LÍNEA MODIFICADA
 
         // ---- Menú Gráfica ----
-        graficaAcordeon.addActionListener(e -> drawing.showSampleChart(DrawingPanel.ChartKind.ACORDEON));
-        graficaCarrusel.addActionListener(e -> drawing.showSampleChart(DrawingPanel.ChartKind.CARROUSEL));
-        graficaScroll.addActionListener(e -> drawing.showSampleChart(DrawingPanel.ChartKind.SCROLL));
+        graficaAcordeon.addActionListener(e -> handleChartAction(DrawingPanel.ChartKind.ACORDEON));
+        graficaCarrusel.addActionListener(e -> handleChartAction(DrawingPanel.ChartKind.CARROUSEL));
+        graficaScroll.addActionListener(e -> handleChartAction(DrawingPanel.ChartKind.SCROLL));
 
         // ---- Menú Deadlock ----
         deadlockRun.addActionListener(e -> runDeadlockScenario(false));
@@ -176,6 +181,11 @@ public class ProyectoPCyP extends JFrame {
 
         selectedProblem = problem;
         currentSim = sim;
+
+        updateChartMenuAvailability();
+        if (selectedProblem != Problem.VIRTUAL_ASSISTANTS && drawing != null) {
+            drawing.hideChart();
+        }
 
         if (currentSim != null) {
             currentSim.setDrawingPanel(this.drawing); // Pasa la referencia
@@ -230,6 +240,21 @@ public class ProyectoPCyP extends JFrame {
         philosophersSim.showSkeleton();
         SyncMethod method = preventDeadlock ? SyncMethod.PHIL_HOARE : SyncMethod.PHIL_DEADLOCK;
         philosophersSim.startWith(method);
+    }
+
+    private void updateChartMenuAvailability() {
+        if (graficaMenu != null) {
+            boolean enable = selectedProblem == Problem.VIRTUAL_ASSISTANTS;
+            graficaMenu.setEnabled(enable);
+        }
+    }
+
+    private void handleChartAction(DrawingPanel.ChartKind kind) {
+        if (selectedProblem != Problem.VIRTUAL_ASSISTANTS || !(currentSim instanceof VirtualAssistantsSim vaSim)) {
+            JOptionPane.showMessageDialog(this, "La visualización de gráficas solo está disponible en el problema de Asistentes Virtuales.", "Gráfica no disponible", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        vaSim.handleChartSelection(kind);
     }
 
     private void saveToFile() {
