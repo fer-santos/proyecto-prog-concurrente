@@ -79,18 +79,20 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
         public void setState(AssistantState state) {
             this.state = state;
         }
+
+        public int getId() {
+            return id;
+        }
     }
 
     private final List<AssistantAgent> agents = new ArrayList<>();
     private final List<Thread> agentThreads = new ArrayList<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
-    private final AtomicInteger completedWindow = new AtomicInteger(0);
     private final Timer animationTimer;
     private final Timer performanceTimer;
     private final Random random = new Random();
     private final EnumSet<SyncMethod> trackedChartMethods = EnumSet.noneOf(SyncMethod.class);
-    private final EnumMap<SyncMethod, Double> syntheticLevels = new EnumMap<>(SyncMethod.class);
-    private final EnumMap<SyncMethod, Double> syntheticDrift = new EnumMap<>(SyncMethod.class);
+    private final ChartSimulationPool chartPool = new ChartSimulationPool();
 
     private DrawingPanel drawingPanel;
     private VirtualAssistantsStrategy currentStrategy;
@@ -127,6 +129,17 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
         }
     }
 
+    private List<AssistantAgent> buildChartAgents() {
+        List<AssistantAgent> roster = new ArrayList<>();
+        int highCount = ASSISTANT_COUNT / 2;
+        for (int i = 0; i < ASSISTANT_COUNT; i++) {
+            boolean highPriority = i < highCount;
+            int laneIndex = highPriority ? i : i - highCount;
+            roster.add(new AssistantAgent(100 + i + 1, highPriority, laneIndex));
+        }
+        return roster;
+    }
+
     @Override
     public void showSkeleton() {
         stopSimulation();
@@ -157,7 +170,6 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
             return;
         }
         resetAgentsToIdle();
-        completedWindow.set(0);
         currentStrategy.start();
         running.set(true);
         enableMethodTracking(method);
@@ -183,7 +195,6 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
             currentStrategy = null;
         }
         currentMethod = SyncMethod.NONE;
-        completedWindow.set(0);
         updatePerformanceTimer();
     }
 
@@ -203,12 +214,13 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
         }
         chartKind = kind;
         chartActive = kind != null;
-        completedWindow.set(0);
         if (chartActive) {
-            resetSyntheticSeeds();
             drawingPanel.showVirtualAssistantsChart(kind);
+            chartPool.ensureRunning(trackedChartMethods);
+            chartPool.resetCounters();
         } else {
             drawingPanel.hideChart();
+            chartPool.stopAll();
         }
         updatePerformanceTimer();
     }
@@ -261,7 +273,6 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
                 agent.assignedToken = -1;
                 notifyGraphFinished(agent);
                 transition(agent, AssistantState.RESTING);
-                completedWindow.incrementAndGet();
                 Thread.sleep(280 + local.nextInt(280));
             } catch (InterruptedException ex) {
                 if (currentStrategy != null && (tokenIndex >= 0 || slotIndex >= 0)) {
@@ -286,68 +297,24 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
 
     private void pushPerformanceSample() {
         if (!chartActive || drawingPanel == null || trackedChartMethods.isEmpty()) {
-            completedWindow.set(0);
             return;
         }
+        chartPool.ensureRunning(trackedChartMethods);
         for (SyncMethod method : trackedChartMethods) {
-            double value = generateSampleFor(method);
+            int completed = chartPool.drainCompleted(method);
+            double base = performanceMultiplier(method);
+            double noise = random.nextGaussian() * 0.25;
+            double value = Math.max(0.1, completed * base + noise);
             drawingPanel.appendVirtualAssistantPerformanceSample(method, value);
         }
-    }
-
-    private double generateSampleFor(SyncMethod method) {
-        if (method == currentMethod && running.get()) {
-            int completed = completedWindow.getAndSet(0);
-            double multiplier = performanceMultiplier(method);
-            double observed = Math.max(0.1, completed * multiplier + random.nextGaussian() * 0.35);
-            double smoothed = blendWithSynthetic(method, observed, 0.65);
-            syntheticLevels.put(method, smoothed);
-            syntheticDrift.put(method, syntheticDrift.getOrDefault(method, 0.0) * 0.4);
-            return smoothed;
-        }
-        double simulated = evolveSyntheticValue(method);
-        syntheticLevels.put(method, simulated);
-        return simulated;
-    }
-
-    private double evolveSyntheticValue(SyncMethod method) {
-        double baseline = performanceMultiplier(method) * 1.1;
-        double level = syntheticLevels.getOrDefault(method, baseline);
-        double drift = syntheticDrift.getOrDefault(method, 0.0);
-        double target = performanceMultiplier(method) * 1.4;
-        drift += (target - level) * 0.035;
-        drift += random.nextGaussian() * 0.02;
-        drift = clamp(drift, -0.45, 0.55);
-        double next = level + drift;
-        next += random.nextGaussian() * 0.12;
-        next = Math.max(0.15, next);
-        syntheticDrift.put(method, drift);
-        return next;
-    }
-
-    private double blendWithSynthetic(SyncMethod method, double observed, double factor) {
-        double previous = syntheticLevels.getOrDefault(method, observed);
-        return previous * (1.0 - factor) + observed * factor;
-    }
-
-    private double clamp(double value, double min, double max) {
-        return Math.max(min, Math.min(max, value));
     }
 
     private void enableMethodTracking(SyncMethod method) {
         if (method == null || method == SyncMethod.NONE) {
             return;
         }
-        if (trackedChartMethods.add(method)) {
-            syntheticLevels.put(method, performanceMultiplier(method));
-            syntheticDrift.put(method, 0.0);
-        }
-    }
-
-    private void resetSyntheticSeeds() {
-        for (SyncMethod method : trackedChartMethods) {
-            syntheticLevels.put(method, performanceMultiplier(method));
-            syntheticDrift.put(method, 0.0);
+        if (trackedChartMethods.add(method) && chartActive) {
+            chartPool.ensureRunning(method);
         }
     }
 
@@ -488,6 +455,145 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
             return;
         }
         SwingUtilities.invokeLater(() -> drawingPanel.showVirtualAssistantFinished(agent.getLabel()));
+    }
+
+    private final class ChartSimulationPool {
+        private final EnumMap<SyncMethod, MethodChartSimulation> simulations = new EnumMap<>(SyncMethod.class);
+
+        synchronized void ensureRunning(SyncMethod method) {
+            if (method == null || method == SyncMethod.NONE) {
+                return;
+            }
+            MethodChartSimulation simulation = simulations.computeIfAbsent(method, MethodChartSimulation::new);
+            simulation.start();
+        }
+
+        synchronized void ensureRunning(Iterable<SyncMethod> methods) {
+            for (SyncMethod method : methods) {
+                ensureRunning(method);
+            }
+        }
+
+        synchronized int drainCompleted(SyncMethod method) {
+            MethodChartSimulation simulation = simulations.get(method);
+            return simulation != null ? simulation.drainCompletedWindow() : 0;
+        }
+
+        synchronized void resetCounters() {
+            for (MethodChartSimulation simulation : simulations.values()) {
+                simulation.resetCounter();
+            }
+        }
+
+        synchronized void stopAll() {
+            for (MethodChartSimulation simulation : simulations.values()) {
+                simulation.stop();
+            }
+            simulations.clear();
+        }
+    }
+
+    private final class MethodChartSimulation {
+        private final SyncMethod method;
+        private final VirtualAssistantsStrategy strategy;
+        private final List<AssistantAgent> chartAgents = new ArrayList<>();
+        private final List<Thread> workers = new ArrayList<>();
+        private final AtomicBoolean running = new AtomicBoolean(false);
+        private final AtomicInteger windowCounter = new AtomicInteger(0);
+
+        MethodChartSimulation(SyncMethod method) {
+            this.method = method;
+            this.strategy = instantiateStrategy(method);
+            if (this.strategy != null) {
+                this.chartAgents.addAll(buildChartAgents());
+            }
+        }
+
+        void start() {
+            if (strategy == null) {
+                return;
+            }
+            if (!running.compareAndSet(false, true)) {
+                return;
+            }
+            strategy.start();
+            workers.clear();
+            for (AssistantAgent agent : chartAgents) {
+                agent.assignedSlot = -1;
+                agent.assignedToken = -1;
+                agent.setState(AssistantState.IDLE);
+            }
+            for (AssistantAgent agent : chartAgents) {
+                Thread worker = new Thread(() -> runLoop(agent), "VA-Chart-" + method + "-" + agent.getLabel());
+                worker.setDaemon(true);
+                worker.start();
+                workers.add(worker);
+            }
+        }
+
+        void stop() {
+            if (!running.compareAndSet(true, false)) {
+                return;
+            }
+            for (Thread worker : workers) {
+                worker.interrupt();
+            }
+            for (Thread worker : workers) {
+                try {
+                    worker.join(200);
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+            workers.clear();
+            windowCounter.set(0);
+            strategy.stop();
+        }
+
+        int drainCompletedWindow() {
+            return windowCounter.getAndSet(0);
+        }
+
+        void resetCounter() {
+            windowCounter.set(0);
+        }
+
+        private void runLoop(AssistantAgent agent) {
+            Random local = new Random((long) agent.getId() * 97L + System.nanoTime());
+            while (running.get()) {
+                int tokenIndex = -1;
+                int slotIndex = -1;
+                try {
+                    Thread.sleep(240 + local.nextInt(360));
+                    tokenIndex = strategy.acquirePriorityToken(agent);
+                    if (tokenIndex < 0) {
+                        continue;
+                    }
+                    agent.assignedToken = tokenIndex;
+                    Thread.sleep(60 + local.nextInt(120));
+                    slotIndex = strategy.acquireServerSlot(agent);
+                    if (slotIndex < 0) {
+                        strategy.releaseResources(agent, tokenIndex, -1);
+                        agent.assignedToken = -1;
+                        continue;
+                    }
+                    agent.assignedSlot = slotIndex;
+                    Thread.sleep(320 + local.nextInt(agent.isHighPriority() ? 320 : 460));
+                    strategy.releaseResources(agent, tokenIndex, slotIndex);
+                    agent.assignedToken = -1;
+                    agent.assignedSlot = -1;
+                    windowCounter.incrementAndGet();
+                    Thread.sleep(160 + local.nextInt(240));
+                } catch (InterruptedException ex) {
+                    if (tokenIndex >= 0 || slotIndex >= 0) {
+                        strategy.releaseResources(agent, tokenIndex, slotIndex);
+                    }
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
     }
 
     @Override
