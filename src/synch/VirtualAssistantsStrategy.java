@@ -3,9 +3,9 @@ package synch;
 import problemas.SyncMethod;
 import problemas.VirtualAssistantsSim.AssistantAgent;
 
-/**
- * Estrategias para el problema de Asistentes Virtuales.
- */
+
+
+
 public interface VirtualAssistantsStrategy extends SynchronizationStrategy {
 
     SyncMethod getMethod();

@@ -87,7 +87,7 @@ public class SmokersSemaphoreStrategy implements SynchronizationStrategy {
                 int smokerId = smokerForPair(pair[0], pair[1]);
                 panel.updateGraphAgentSignalingSemaphore(smokerId, pair[0], pair[1]);
                 smokerSems[smokerId].release();
-                permitHeld = false; // El fumador liberará el semáforo del agente
+                permitHeld = false; 
                 if (!sleepVisualization()) {
                     break;
                 }

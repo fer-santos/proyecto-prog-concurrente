@@ -2,7 +2,6 @@ package core;
 
 import javax.swing.*;
 import java.awt.*;
-// ... (otras importaciones necesarias: MouseEvent, Line2D, ArrayList, Optional) ...
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -34,7 +33,7 @@ import problemas.SyncMethod;
 public class DrawingPanel extends JPanel implements MouseListener, MouseMotionListener {
 
     volatile GraphData data = new GraphData();
-    // ... (otros campos: dragging, offX, offY, hoveredTarget, menus, etc.) ...
+    
     private ShapeNode dragging = null;
     private int offX, offY;
     private ShapeNode hoveredTarget = null;
@@ -122,7 +121,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     private int autoVaTokens = 0;
 
     DrawingPanel() {
-        // ... (código del constructor igual que antes) ...
+        
         setLayout(null);
         setBackground(Color.WHITE);
         JMenuItem crearProceso = new JMenuItem("Proceso");
@@ -158,9 +157,9 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         });
     }
 
-    // --- Métodos de manejo de grafo (igual que antes) ---
+    
     synchronized void setData(GraphData g) {
-        /* ... código ... */
+        
         this.data = (g != null) ? g : new GraphData();
         dragging = null;
         hoveredTarget = null;
@@ -169,7 +168,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     }
 
     private synchronized void createNode(NodeType type, int x, int y) {
-        /* ... código ... */
+        
         if (data == null) {
             data = new GraphData();
         }
@@ -192,7 +191,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     }
 
     private synchronized Optional<ShapeNode> findNodeAt(int x, int y) {
-        /* ... código ... */
+        
         if (data == null || data.nodes == null) {
             return Optional.empty();
         }
@@ -207,7 +206,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
 
     @Override
     protected void paintComponent(Graphics g) {
-        /* ... código ... */
+        
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -265,13 +264,13 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     }
 
     public synchronized void clearGraph() {
-        /* ... código ... */
+        
         clearGraphInternal();
         SwingUtilities.invokeLater(this::repaint);
     }
 
     private synchronized void clearGraphInternal() {
-        /* ... código ... */
+        
         if (data != null) {
             if (data.nodes == null) {
                 data.nodes = new ArrayList<>();
@@ -910,7 +909,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     }
 
     private synchronized Optional<Integer> findNodeIdByLabel(String label) {
-        /* ... código ... */
+        
         if (data == null || data.nodes == null || label == null) {
             return Optional.empty();
         }
@@ -918,7 +917,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     }
 
     private synchronized void addNodeIfNotExists(String label, NodeType type, int x, int y) {
-        /* ... código ... */
+        
         if (label == null || data == null) {
             return;
         }
@@ -951,7 +950,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     }
 
     private synchronized void removeConnectionsInvolving(String nodeLabel) {
-        /* ... código ... */
+        
         if (nodeLabel == null || data == null || data.connections == null) {
             return;
         }
@@ -961,7 +960,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     }
 
     private synchronized void removeConnection(String fromLabel, String toLabel) {
-        /* ... código ... */
+        
         if (fromLabel == null || toLabel == null || data == null || data.connections == null) {
             return;
         }
@@ -1273,7 +1272,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     }
 
     private synchronized void addConnectionIfNotExists(String fromLabel, String toLabel, String kind) {
-        /* ... código ... */
+        
         if (fromLabel == null || toLabel == null || kind == null || data == null) {
             return;
         }
@@ -1390,7 +1389,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     }
 
     public synchronized void setupProducerConsumerGraph() {
-        /* ... código ... */
+        
         clearGraphInternal();
         int width = getWidth() > 0 ? getWidth() : 600;
         int height = getHeight() > 0 ? getHeight() : 400;
@@ -1404,14 +1403,14 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         addNodeIfNotExists("R_Buffer", NodeType.RECURSO, centerX, bottomY);
     }
 
-    // --- Métodos específicos P-C Mutex (SIN DELAYS, CON LOGGING) ---
+    
     public synchronized void showProducerRequestingMutex() {
         String from = "P1";
         String to = "R_Mutex";
         String kind = "Solicitud";
         removeConnectionsInvolving(from);
         addConnectionIfNotExists(from, to, kind);
-        System.out.println("GRAPH: P1 -> R_Mutex (Solicitud). Connections: " + data.connections.size()); // LOGGING
+        System.out.println("GRAPH: P1 -> R_Mutex (Solicitud). Connections: " + data.connections.size()); 
         SwingUtilities.invokeLater(this::repaint);
     }
 
@@ -1419,9 +1418,9 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         String from = "R_Mutex";
         String to = "P1";
         String kind = "Asignado";
-        removeConnectionsInvolving(to); // Limpia P1
+        removeConnectionsInvolving(to); 
         addConnectionIfNotExists(from, to, kind);
-        System.out.println("GRAPH: R_Mutex -> P1 (Asignado). Connections: " + data.connections.size()); // LOGGING
+        System.out.println("GRAPH: R_Mutex -> P1 (Asignado). Connections: " + data.connections.size()); 
         SwingUtilities.invokeLater(this::repaint);
     }
 
@@ -1429,19 +1428,19 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         String holder = "P1";
         String blockedBy = "R_Buffer";
         String kind = "Solicita Espacio";
-        addConnectionIfNotExists("R_Mutex", holder, "Asignado"); // Asegura asignación mutex
-        // Limpia otras conexiones del buffer
+        addConnectionIfNotExists("R_Mutex", holder, "Asignado"); 
+
         removeConnection("C1", blockedBy);
         removeConnection(blockedBy, "C1");
         addConnectionIfNotExists(holder, blockedBy, kind);
-        System.out.println("GRAPH: P1 -> R_Buffer (Bloqueado). Connections: " + data.connections.size()); // LOGGING
+        System.out.println("GRAPH: P1 -> R_Buffer (Bloqueado). Connections: " + data.connections.size()); 
         SwingUtilities.invokeLater(this::repaint);
     }
 
     public synchronized void showProducerReleasingMutex() {
         String releaser = "P1";
         removeConnectionsInvolving(releaser);
-        System.out.println("GRAPH: P1 libera R_Mutex. Connections: " + data.connections.size()); // LOGGING
+        System.out.println("GRAPH: P1 libera R_Mutex. Connections: " + data.connections.size()); 
         SwingUtilities.invokeLater(this::repaint);
     }
 
@@ -1451,7 +1450,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         String kind = "Solicitud";
         removeConnectionsInvolving(from);
         addConnectionIfNotExists(from, to, kind);
-        System.out.println("GRAPH: C1 -> R_Mutex (Solicitud). Connections: " + data.connections.size()); // LOGGING
+        System.out.println("GRAPH: C1 -> R_Mutex (Solicitud). Connections: " + data.connections.size()); 
         SwingUtilities.invokeLater(this::repaint);
     }
 
@@ -1459,9 +1458,9 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         String from = "R_Mutex";
         String to = "C1";
         String kind = "Asignado";
-        removeConnectionsInvolving(to); // Limpia C1
+        removeConnectionsInvolving(to); 
         addConnectionIfNotExists(from, to, kind);
-        System.out.println("GRAPH: R_Mutex -> C1 (Asignado). Connections: " + data.connections.size()); // LOGGING
+        System.out.println("GRAPH: R_Mutex -> C1 (Asignado). Connections: " + data.connections.size()); 
         SwingUtilities.invokeLater(this::repaint);
     }
 
@@ -1469,23 +1468,23 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         String holder = "C1";
         String blockedBy = "R_Buffer";
         String kind = "Solicita Item";
-        addConnectionIfNotExists("R_Mutex", holder, "Asignado"); // Asegura asignación mutex
-        // Limpia otras conexiones del buffer
+        addConnectionIfNotExists("R_Mutex", holder, "Asignado"); 
+
         removeConnection("P1", blockedBy);
         removeConnection(blockedBy, "P1");
         addConnectionIfNotExists(holder, blockedBy, kind);
-        System.out.println("GRAPH: C1 -> R_Buffer (Bloqueado). Connections: " + data.connections.size()); // LOGGING
+        System.out.println("GRAPH: C1 -> R_Buffer (Bloqueado). Connections: " + data.connections.size()); 
         SwingUtilities.invokeLater(this::repaint);
     }
 
     public synchronized void showConsumerReleasingMutex() {
         String releaser = "C1";
         removeConnectionsInvolving(releaser);
-        System.out.println("GRAPH: C1 libera R_Mutex. Connections: " + data.connections.size()); // LOGGING
+        System.out.println("GRAPH: C1 libera R_Mutex. Connections: " + data.connections.size()); 
         SwingUtilities.invokeLater(this::repaint);
     }
 
-    // --- Métodos específicos P-C Semáforos ---
+    
     public synchronized void setupProducerConsumerSemaphoreGraph() {
         clearGraphInternal();
         int width = getWidth() > 0 ? getWidth() : 600;
@@ -1618,7 +1617,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         SwingUtilities.invokeLater(this::repaint);
     }
 
-    // --- Métodos específicos P-C Variable Condición ---
+    
     public synchronized void setupProducerConsumerConditionGraph() {
         clearGraphInternal();
         int width = getWidth() > 0 ? getWidth() : 600;
@@ -1748,7 +1747,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         SwingUtilities.invokeLater(this::repaint);
     }
 
-    // --- Métodos específicos P-C Monitores ---
+    
     public synchronized void setupProducerConsumerMonitorGraph() {
         clearGraphInternal();
         int width = getWidth() > 0 ? getWidth() : 600;
@@ -1878,7 +1877,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         SwingUtilities.invokeLater(this::repaint);
     }
 
-    // --- Métodos específicos P-C Barreras ---
+    
     public synchronized void setupProducerConsumerBarrierGraph() {
         clearGraphInternal();
         int width = getWidth() > 0 ? getWidth() : 600;
@@ -1950,7 +1949,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         SwingUtilities.invokeLater(this::repaint);
     }
 
-    // --- Métodos específicos Filósofos Mutex ---
+    
     public synchronized void setupPhilosophersGraph_Mutex() {
         clearGraphInternal();
         int width = getWidth() > 0 ? getWidth() : 600;
@@ -2886,7 +2885,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         SwingUtilities.invokeLater(this::repaint);
     }
 
-    // --- Métodos Lectores-Escritores Mutex ---
+    
     public synchronized void setupReadersWritersGraph_Mutex() {
         clearGraphInternal();
         int width = getWidth() > 0 ? getWidth() : 600;
@@ -3507,7 +3506,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         SwingUtilities.invokeLater(this::repaint);
     }
 
-    // --- Métodos específicos Barbero Dormilón Mutex ---
+    
     public synchronized void setupSleepingBarberGraph() {
         clearGraphInternal();
         int width = getWidth() > 0 ? getWidth() : 600;
@@ -3986,9 +3985,9 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         SwingUtilities.invokeLater(this::repaint);
     }
 
-    // --- Métodos de dibujo y listeners (sin cambios) ---
+    
     private void drawNode(Graphics2D g2, ShapeNode n, boolean highlight) {
-        /* ... código ... */
+        
         if (n == null || n.label == null) {
             return;
         }
@@ -4002,7 +4001,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             }
             g2.setColor(NODE_BORDER_COLOR);
             g2.drawOval(n.x - h, n.y - h, n.size, n.size);
-        } else { // RECURSO
+        } else { 
             g2.setColor(RESOURCE_NODE_FILL);
             g2.fillRect(n.x - h, n.y - h, n.size, n.size);
             if (highlight) {
@@ -4020,7 +4019,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     }
 
     private void drawArrow(Graphics2D g2, ShapeNode from, ShapeNode to) {
-        /* ... código ... */
+        
         if (from == null || to == null) {
             return;
         }
@@ -4036,7 +4035,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     }
 
     private Point edgePointTowards(ShapeNode n, Point target) {
-        /* ... código ... */
+        
         if (n == null || target == null) {
             return null;
         }
@@ -4050,7 +4049,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             int ex = n.x + (int) Math.round(Math.cos(ang) * h);
             int ey = n.y + (int) Math.round(Math.sin(ang) * h);
             return new Point(ex, ey);
-        } else { // RECURSO
+        } else { 
             double cos = Math.cos(ang), sin = Math.sin(ang);
             double t = Math.max(Math.abs(cos), Math.abs(sin));
             if (t < 1e-6) {
@@ -4063,7 +4062,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     }
 
     private void drawArrowHead(Graphics2D g2, Point from, Point to) {
-        /* ... código ... */
+        
         if (from == null || to == null || from.equals(to)) {
             return;
         }
@@ -4081,7 +4080,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
 
     @Override
     public synchronized void mousePressed(MouseEvent e) {
-        /* ... código ... */
+        
         if (SwingUtilities.isRightMouseButton(e)) {
             Optional<ShapeNode> hit = findNodeAt(e.getX(), e.getY());
             if (hit.isPresent()) {
@@ -4105,7 +4104,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
 
     @Override
     public synchronized void mouseDragged(MouseEvent e) {
-        /* ... código ... */
+        
         if (dragging != null) {
             dragging.x = e.getX() - offX;
             dragging.y = e.getY() - offY;
@@ -4117,7 +4116,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
 
     @Override
     public synchronized void mouseReleased(MouseEvent e) {
-        /* ... código ... */
+        
         ShapeNode currentDragging = this.dragging;
         ShapeNode currentHovered = this.hoveredTarget;
         if (currentDragging != null && currentHovered != null) {
@@ -4136,7 +4135,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
 
     @Override
     public void mouseMoved(MouseEvent e) {
-        /* ... código ... */
+        
         setCursor(findNodeAt(e.getX(), e.getY()).isPresent() ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
     }
 
@@ -4152,4 +4151,4 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     public void mouseExited(MouseEvent e) {
     }
 
-} // Fin de la clase DrawingPanel
+} 

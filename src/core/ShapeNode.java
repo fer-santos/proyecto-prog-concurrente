@@ -7,7 +7,7 @@ public class ShapeNode implements Serializable {
     NodeType type;
     int x, y;
     int size;
-    String label; // Pn / Rn
+    String label; 
 
     boolean contains(int px, int py) {
         int h = size / 2;

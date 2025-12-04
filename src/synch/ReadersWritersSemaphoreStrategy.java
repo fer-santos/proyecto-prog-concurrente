@@ -62,7 +62,7 @@ public class ReadersWritersSemaphoreStrategy implements ReadersWritersStrategy {
                 }
             }
         } finally {
-            // executor cleanup handled on stop
+
         }
     }
 

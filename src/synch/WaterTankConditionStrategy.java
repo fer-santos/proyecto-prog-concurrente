@@ -4,7 +4,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import problemas.WaterTankSim;
 
-// NOTA: Esta es la implementación del patrón MONITOR (Mutex + Condition)
+
 public class WaterTankConditionStrategy implements SynchronizationStrategy {
     private final WaterTankSim panel;
     private Thread producer, consumer;

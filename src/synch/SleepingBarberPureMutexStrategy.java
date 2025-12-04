@@ -7,19 +7,19 @@ import problemas.SleepingBarberSim;
 import problemas.SleepingBarberSim.Customer;
 import problemas.SleepingBarberSim.CustState;
 
-/**
- * Implementación de "Mutex Puro" (espera activa) para el Barbero Dormilón. NO
- * usa Variables de Condición. Los hilos (barbero, generador) bloquean el mutex,
- * comprueban el estado de las sillas, y si no pueden actuar, liberan el mutex y
- * duermen un tiempo antes de volver a intentarlo.
- */
+
+
+
+
+
+
 public class SleepingBarberPureMutexStrategy implements SynchronizationStrategy {
 
     private final SleepingBarberSim panel;
     private Thread generator, barberLoop;
     private static final long VISUALIZATION_DELAY = 420L;
 
-    // Un ÚNICO lock compartido
+
     private final ReentrantLock mutex = new ReentrantLock(true);
 
     public SleepingBarberPureMutexStrategy(SleepingBarberSim panel) {
@@ -29,7 +29,7 @@ public class SleepingBarberPureMutexStrategy implements SynchronizationStrategy 
     @Override
     public void start() {
 
-        // --- Hilo Generador de Clientes ---
+        
         generator = new Thread(() -> {
             try {
                 while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
@@ -83,7 +83,7 @@ public class SleepingBarberPureMutexStrategy implements SynchronizationStrategy 
             }
         }, "GeneratorPureMutex");
 
-        // --- Hilo del Barbero ---
+        
         barberLoop = new Thread(() -> {
             try {
                 while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
@@ -169,7 +169,7 @@ public class SleepingBarberPureMutexStrategy implements SynchronizationStrategy 
         }
     }
 
-    // --- MÉTODOS AUXILIARES (copiados de tu implementación anterior) ---
+    
     private void sleepRand(int a, int b) {
         try {
             Thread.sleep(a + rnd(b - a));

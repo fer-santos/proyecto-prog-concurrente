@@ -15,9 +15,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
-import javax.swing.SwingUtilities; // <--- Import necesario
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
-// --- Importaciones de Estrategias ---
 import synch.ReadersWritersBarrierStrategy;
 import synch.ReadersWritersConditionStrategy;
 import synch.ReadersWritersMonitorStrategy;
@@ -25,7 +24,6 @@ import synch.ReadersWritersMutexStrategy;
 import synch.ReadersWritersSemaphoreStrategy;
 import synch.ReadersWritersStrategy;
 import synch.SynchronizationStrategy;
-// --- IMPORTACIÓN CORRECTA ---
 import core.DrawingPanel;
 
 public class ReadersWritersSim extends JPanel implements SimPanel {
@@ -45,31 +43,31 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
 
         public Role role;
         public AState state = AState.ARRIVING;
-        public double x, y, tx, ty; // Posición actual y objetivo
+        public double x, y, tx, ty; 
         public Color color;
-        public int id; // ID único para el grafo RAG
+        public int id; 
     }
 
-    // --- Estado de la Simulación ---
+    
     public final AtomicBoolean running = new AtomicBoolean(false);
-    public volatile int readersActive = 0; // Contadores lógicos (protegidos por estrategia)
+    public volatile int readersActive = 0; 
     public volatile boolean writerActive = false;
-    // Contadores para visualización (actualizados desde estrategia/monitor)
+    
     public volatile int readersWaiting = 0;
     public volatile int writersWaiting = 0;
-    // Lista sincronizada de actores visuales
-    public final List<Actor> actors = Collections.synchronizedList(new ArrayList<>());
-    private int nextActorId = 1; // Para asignar IDs a los actores
 
-    // --- UI y Estrategia ---
+    public final List<Actor> actors = Collections.synchronizedList(new ArrayList<>());
+    private int nextActorId = 1; 
+
+    
     private final Timer timer = new Timer(30, e -> stepAndRepaint());
     private String methodTitle = "";
-    private SynchronizationStrategy currentStrategy; // Mantiene la estrategia actual
+    private SynchronizationStrategy currentStrategy; 
 
-    // --- NUEVO CAMPO ---
+    
     private DrawingPanel drawingPanel = null;
 
-    // --- NUEVO MÉTODO IMPLEMENTADO ---
+    
     @Override
     public void setDrawingPanel(DrawingPanel drawingPanel) {
         this.drawingPanel = drawingPanel;
@@ -80,43 +78,43 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
     }
 
     private void resetState() {
-        // Usa synchronized para modificar la lista de forma segura
+
         synchronized (actors) {
             actors.clear();
         }
-        // Resetea contadores lógicos y visuales
+
         readersActive = 0;
         writerActive = false;
         readersWaiting = 0;
         writersWaiting = 0;
-        nextActorId = 1; // Reinicia contador de ID
+        nextActorId = 1; 
     }
 
-    // --- MÉTODO MODIFICADO ---
+    
     @Override
     public void showSkeleton() {
-        stopSimulation(); // Detiene hilos y limpia estrategia
+        stopSimulation(); 
         methodTitle = "";
-        resetState();    // Reinicia estado lógico
-        clearRagGraph(); // Limpia el grafo asociado
-        repaint();       // Redibuja este panel
+        resetState();    
+        clearRagGraph(); 
+        repaint();       
     }
 
-    // --- NUEVO MÉTODO AUXILIAR ---
+    
     private void clearRagGraph() {
         if (drawingPanel != null) {
             SwingUtilities.invokeLater(() -> drawingPanel.clearGraph());
         }
     }
 
-    // --- MÉTODO MODIFICADO ---
+    
     @Override
     public void startWith(SyncMethod method) {
         stopSimulation();
-        clearRagGraph(); // Limpia grafo al inicio
-        resetState();    // Reinicia estado lógico
+        clearRagGraph(); 
+        resetState();    
 
-        // --- Lógica de Título ---
+        
         if (method == SyncMethod.MUTEX) {
             methodTitle = "Mutex";
         } else if (method == SyncMethod.SEMAPHORES) {
@@ -131,11 +129,11 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
             methodTitle = "Desconocido";
         }
 
-        // --- Configuración Inicial del Grafo RAG ---
+        
         if (drawingPanel != null) {
             SwingUtilities.invokeLater(() -> {
                 if (method == SyncMethod.MUTEX) {
-                    // Llama a un método específico (a crear en DrawingPanel)
+                    
                     drawingPanel.setupReadersWritersGraph_Mutex();
                 } else if (method == SyncMethod.SEMAPHORES) {
                     drawingPanel.setupReadersWritersGraph_Semaphore();
@@ -146,41 +144,41 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
                 } else if (method == SyncMethod.BARRIERS) {
                     drawingPanel.setupReadersWritersGraph_Barrier();
                 }
-                // Añadiremos setups para otros métodos después
-                // else if ...
+
+                
             });
         }
 
-        running.set(true); // Marcar como corriendo
+        running.set(true); 
 
-        // --- Lógica de Estrategia ---
+        
         SynchronizationStrategy tempStrategy = null;
         if (method == SyncMethod.MUTEX) {
-            tempStrategy = new ReadersWritersMutexStrategy(this); // Pasa 'this'
+            tempStrategy = new ReadersWritersMutexStrategy(this); 
         } else if (method == SyncMethod.SEMAPHORES) {
-            tempStrategy = new ReadersWritersSemaphoreStrategy(this); // Pasa 'this'
+            tempStrategy = new ReadersWritersSemaphoreStrategy(this); 
         } else if (method == SyncMethod.VAR_COND) {
-            tempStrategy = new ReadersWritersConditionStrategy(this); // Pasa 'this'
+            tempStrategy = new ReadersWritersConditionStrategy(this); 
         } else if (method == SyncMethod.MONITORS) {
-            tempStrategy = new ReadersWritersMonitorStrategy(this); // Pasa 'this'
+            tempStrategy = new ReadersWritersMonitorStrategy(this); 
         } else if (method == SyncMethod.BARRIERS) {
-            tempStrategy = new ReadersWritersBarrierStrategy(this); // Pasa 'this'
+            tempStrategy = new ReadersWritersBarrierStrategy(this); 
         }
 
         currentStrategy = tempStrategy;
 
         if (currentStrategy != null) {
-            // Verifica si la estrategia necesita la interfaz específica
+
             if (!(currentStrategy instanceof ReadersWritersStrategy)) {
                 System.err.println("Error: La estrategia seleccionada no implementa ReadersWritersStrategy.");
                 methodTitle = "ERROR DE TIPO";
                 running.set(false);
                 repaint();
                 clearRagGraph();
-                return; // No continuar si el tipo es incorrecto
+                return; 
             }
-            currentStrategy.start(); // Inicia spawner, etc.
-            timer.start();          // Inicia timer de animación
+            currentStrategy.start(); 
+            timer.start();          
         } else {
             System.err.println("Método de sincronización no implementado: " + method);
             methodTitle = "NO IMPLEMENTADO";
@@ -190,8 +188,8 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
         }
     }
 
-    // --- NUEVOS MÉTODOS para ser llamados por la ESTRATEGIA (Mutex Puro) ---
-    // Reciben el ID único del actor
+    
+
     public void updateGraphReaderRequestingLock(int actorId) {
         if (drawingPanel != null && currentStrategy instanceof ReadersWritersMutexStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showActorRequestingLock_RW("L" + actorId));
@@ -240,7 +238,7 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
         }
     }
 
-    // --- Métodos para Semáforos ---
+    
     public void updateGraphReaderRequestingCountSemaphore(int actorId) {
         if (drawingPanel != null && currentStrategy instanceof ReadersWritersSemaphoreStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showReaderRequestingCountSemaphore_RW("L" + actorId));
@@ -319,7 +317,7 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
         }
     }
 
-    // --- Métodos para Variable de Condición ---
+    
     public void updateGraphReaderRequestingLockCondition(int actorId) {
         if (drawingPanel != null && currentStrategy instanceof ReadersWritersConditionStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showReaderRequestingLockCondition_RW("L" + actorId));
@@ -428,7 +426,7 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
         }
     }
 
-    // --- Métodos para Monitores ---
+    
     public void updateGraphReaderRequestingMonitor(int actorId) {
         if (drawingPanel != null && currentStrategy instanceof ReadersWritersMonitorStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showReaderRequestingMonitor_RW("L" + actorId));
@@ -537,7 +535,7 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
         }
     }
 
-    // --- Métodos para Barreras ---
+    
     public void updateGraphReaderRequestingBarrierLock(int actorId) {
         if (drawingPanel != null && currentStrategy instanceof ReadersWritersBarrierStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showReaderRequestingBarrierLock_RW("L" + actorId));
@@ -634,7 +632,7 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
         }
     }
 
-    // Método para asignar un ID único al Actor cuando se crea
+
     public int getNextActorId() {
         return nextActorId++;
     }
@@ -659,15 +657,15 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
         }
     }
 
-    // --- MÉTODO MODIFICADO ---
+    
     @Override
     public void stopSimulation() {
         running.set(false);
         if (currentStrategy != null) {
-            currentStrategy.stop(); // Interrumpe Spawner y ExecutorService
+            currentStrategy.stop(); 
             currentStrategy = null;
         }
-        timer.stop(); // Detiene timer de animación
+        timer.stop(); 
     }
 
     @Override
@@ -681,36 +679,36 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
         return new Point(w / 2, (int) (h * 0.45));
     }
 
-    // --- stepAndRepaint, paintComponent, drawActor, drawCentered SIN CAMBIOS ---
-    // (Asegúrate de que el código que tenías esté aquí)
+    
+    
     private void stepAndRepaint() {
         List<Actor> toRemove = new ArrayList<>();
-        // Sincroniza acceso a la lista 'actors'
+        
         synchronized (actors) {
             for (Actor a : actors) {
                 if (a == null) {
-                    continue; // Seguridad extra
+                    continue; 
                 }
                 double vx = a.tx - a.x, vy = a.ty - a.y;
                 double d = Math.hypot(vx, vy);
-                double sp = 8.0; // Velocidad de movimiento
-                if (d > 1) { // Si no ha llegado al destino
+                double sp = 8.0; 
+                if (d > 1) { 
                     a.x += vx / d * Math.min(sp, d);
                     a.y += vy / d * Math.min(sp, d);
-                } else if (a.state == AState.ARRIVING) { // Si llegó a la zona de espera
+                } else if (a.state == AState.ARRIVING) { 
                     a.state = AState.WAITING;
-                    // Llama a requestAccess solo si la estrategia es del tipo correcto
+
                     if (currentStrategy instanceof ReadersWritersStrategy) {
                         ((ReadersWritersStrategy) currentStrategy).requestAccess(a);
                     }
-                } else if (a.state == AState.LEAVING && d <= 1) { // Si llegó al punto de salida
+                } else if (a.state == AState.LEAVING && d <= 1) { 
                     a.state = AState.DONE;
-                    toRemove.add(a); // Marcar para eliminar
+                    toRemove.add(a); 
                 }
             }
-            actors.removeAll(toRemove); // Elimina los actores marcados
+            actors.removeAll(toRemove); 
         }
-        repaint(); // Solicita redibujado
+        repaint(); 
     }
 
     @Override
@@ -720,7 +718,7 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         int w = getWidth(), h = getHeight();
 
-        // Título
+
         if (!methodTitle.isEmpty()) {
             g2.setFont(getFont().deriveFont(Font.BOLD, 18f));
             String t = "Lectores-Escritores (" + methodTitle + ")";
@@ -728,9 +726,9 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
             g2.drawString(t, (w - tw) / 2, (int) (h * 0.06));
         }
 
-        // Dibuja el "Documento"
+        
         Rectangle doc = new Rectangle(docCenter().x - 150, docCenter().y - 100, 300, 200);
-        // Lee variables volátiles una vez para el color
+
         boolean isWriterActive = this.writerActive;
         int activeReaders = this.readersActive;
         g2.setColor(isWriterActive ? new Color(255, 180, 180) : (activeReaders > 0 ? new Color(190, 235, 190) : new Color(240, 240, 240)));
@@ -739,12 +737,12 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
         g2.setStroke(new BasicStroke(3f));
         g2.drawRoundRect(doc.x, doc.y, doc.width, doc.height, 12, 12);
 
-        // Título del documento
+
         g2.setFont(getFont().deriveFont(Font.BOLD, 16f));
         String docTitle = isWriterActive ? "(ESCRIBIENDO)" : (activeReaders > 0 ? "(LEYENDO)" : "(Libre)");
         drawCenteredString(g2, docTitle, docCenter().x, doc.y - 12);
 
-        // Contadores en la parte inferior (leen variables volátiles)
+        
         g2.setFont(getFont().deriveFont(Font.PLAIN, 13f));
         g2.setColor(new Color(70, 70, 70));
         g2.drawString("Leyendo: " + activeReaders, 20, h - 54);
@@ -752,11 +750,11 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
         g2.drawString("Lectores en espera: " + this.readersWaiting, w - 220, h - 54);
         g2.drawString("Escritores en espera: " + this.writersWaiting, w - 220, h - 36);
 
-        // Dibuja los actores (con copia sincronizada)
+        
         synchronized (actors) {
-            List<Actor> actorsCopy = new ArrayList<>(actors); // Copia segura para iterar
+            List<Actor> actorsCopy = new ArrayList<>(actors); 
             for (Actor a : actorsCopy) {
-                if (a != null) { // Chequeo null
+                if (a != null) { 
                     drawActor(g2, a);
                 }
             }
@@ -769,23 +767,23 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
         if (a == null) {
             return;
         }
-        int r = 16; // Radio del actor
+        int r = 16; 
         int drawX = (int) a.x;
         int drawY = (int) a.y;
         g2.setColor(a.color != null ? a.color : Color.GRAY);
         g2.fillOval(drawX - r, drawY - r, r * 2, r * 2);
         g2.setColor(Color.BLACK);
         g2.drawOval(drawX - r, drawY - r, r * 2, r * 2);
-        // Etiqueta (L o E)
+        
         g2.setFont(getFont().deriveFont(Font.BOLD, 12f));
-        g2.setColor(Color.WHITE); // Color de la letra
+        g2.setColor(Color.WHITE); 
         drawCenteredString(g2, a.role == Role.READER ? "L" : "E", drawX, drawY);
     }
 
-    // Renombrado para evitar confusión con drawCentered en otras clases
+
     private void drawCenteredString(Graphics2D g2, String s, int x, int y) {
         FontMetrics fm = g2.getFontMetrics();
-        g2.drawString(s, x - fm.stringWidth(s) / 2, y + fm.getAscent() / 2 - 2); // Ajuste vertical
+        g2.drawString(s, x - fm.stringWidth(s) / 2, y + fm.getAscent() / 2 - 2); 
     }
 
-} // Fin de la clase ReadersWritersSim
+} 

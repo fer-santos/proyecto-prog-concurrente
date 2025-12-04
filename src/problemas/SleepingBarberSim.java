@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.*;
 import synch.*;
-// --- IMPORTACIÓN CORRECTA ---
+
 import core.DrawingPanel;
 
 public class SleepingBarberSim extends JPanel implements SimPanel {
@@ -31,22 +31,22 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
         public Color color;
     }
 
-    // --- Estado de la Simulación ---
+    
     public final List<Customer> customers = Collections.synchronizedList(new ArrayList<>());
-    public final Customer[] seats = new Customer[MAX_WAIT_CHAIRS]; // Sillas de espera
-    public volatile Customer inChair = null; // Cliente en la silla del barbero
-    public volatile BarberState barberState = BarberState.SLEEPING; // Estado del barbero
-    public final AtomicBoolean running = new AtomicBoolean(false); // Controla si la simulación corre
+    public final Customer[] seats = new Customer[MAX_WAIT_CHAIRS]; 
+    public volatile Customer inChair = null; 
+    public volatile BarberState barberState = BarberState.SLEEPING; 
+    public final AtomicBoolean running = new AtomicBoolean(false); 
 
-    // --- UI y Estrategia ---
+    
     private final Timer repaintTimer = new Timer(30, e -> stepAndRepaint());
     private String methodTitle = "";
     private SynchronizationStrategy currentStrategy;
 
-    // --- NUEVO CAMPO ---
+    
     private DrawingPanel drawingPanel = null;
 
-    // --- NUEVO MÉTODO IMPLEMENTADO ---
+    
     @Override
     public void setDrawingPanel(DrawingPanel drawingPanel) {
         this.drawingPanel = drawingPanel;
@@ -54,20 +54,20 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
 
     public SleepingBarberSim() {
         setBackground(new Color(238, 238, 238));
-        // No resetear estado aquí
+
     }
 
-    // --- MÉTODO MODIFICADO ---
+    
     @Override
     public void showSkeleton() {
-        stopSimulation(); // Detiene hilos y limpia estrategia
+        stopSimulation(); 
         methodTitle = "";
-        resetState();    // Reinicia estado lógico
-        clearRagGraph(); // Limpia el grafo asociado
-        repaint();       // Redibuja este panel
+        resetState();    
+        clearRagGraph(); 
+        repaint();       
     }
 
-    // --- NUEVO MÉTODO AUXILIAR ---
+    
     private void clearRagGraph() {
         if (drawingPanel != null) {
             SwingUtilities.invokeLater(() -> drawingPanel.clearGraph());
@@ -75,11 +75,11 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
     }
 
     private void resetState() {
-        // Usa synchronized para seguridad si se accediera desde múltiples hilos (aunque aquí no aplica tanto)
+        
         synchronized (customers) {
             customers.clear();
         }
-        synchronized (seats) { // Sincroniza acceso a seats
+        synchronized (seats) { 
             for (int i = 0; i < seats.length; i++) {
                 seats[i] = null;
             }
@@ -88,14 +88,12 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
         barberState = BarberState.SLEEPING;
     }
 
-    // --- MÉTODO MODIFICADO ---
     @Override
     public void startWith(SyncMethod method) {
         stopSimulation();
-        clearRagGraph(); // Limpia grafo al inicio
-        resetState();    // Reinicia estado lógico
+        clearRagGraph(); 
+        resetState();    
 
-        // --- Lógica de Título ---
         if (method == SyncMethod.MUTEX) {
             methodTitle = "Mutex";
         } else if (method == SyncMethod.SEMAPHORES) {
@@ -110,11 +108,9 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
             methodTitle = "Desconocido";
         }
 
-        // --- Configuración Inicial del Grafo RAG ---
         if (drawingPanel != null) {
             SwingUtilities.invokeLater(() -> {
                 if (method == SyncMethod.MUTEX) {
-                    // Llama a un método específico para barbero (a crear en DrawingPanel)
                     drawingPanel.setupSleepingBarberGraph();
                 } else if (method == SyncMethod.SEMAPHORES) {
                     drawingPanel.setupSleepingBarberGraph_Semaphore();
@@ -125,26 +121,23 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
                 } else if (method == SyncMethod.BARRIERS) {
                     drawingPanel.setupSleepingBarberGraph_Barrier();
                 }
-                // Añadiremos setups para otros métodos después
-                // else if (method == SyncMethod.SEMAPHORES) { ... }
-                // etc...
+
             });
         }
 
-        running.set(true); // Marcar como corriendo
+        running.set(true); 
 
-        // --- Lógica de Estrategia ---
         SynchronizationStrategy tempStrategy = null;
         if (method == SyncMethod.MUTEX) {
-            tempStrategy = new SleepingBarberPureMutexStrategy(this); // Pasa 'this'
+            tempStrategy = new SleepingBarberPureMutexStrategy(this); 
         } else if (method == SyncMethod.SEMAPHORES) {
-            tempStrategy = new SleepingBarberSemaphoreStrategy(this); // Pasa 'this'
+            tempStrategy = new SleepingBarberSemaphoreStrategy(this); 
         } else if (method == SyncMethod.VAR_COND) {
-            tempStrategy = new SleepingBarberConditionStrategy(this); // Pasa 'this'
+            tempStrategy = new SleepingBarberConditionStrategy(this); 
         } else if (method == SyncMethod.MONITORS) {
-            tempStrategy = new SleepingBarberMonitorStrategy(this); // Pasa 'this'
+            tempStrategy = new SleepingBarberMonitorStrategy(this); 
         } else if (method == SyncMethod.BARRIERS) {
-            tempStrategy = new SleepingBarberBarrierStrategy(this); // Pasa 'this'
+            tempStrategy = new SleepingBarberBarrierStrategy(this); 
         }
 
         currentStrategy = tempStrategy;
@@ -157,11 +150,10 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
             methodTitle = "NO IMPLEMENTADO";
             running.set(false);
             repaint();
-            clearRagGraph(); // Limpia si no se encontró
+            clearRagGraph(); 
         }
     }
 
-    // --- NUEVOS MÉTODOS para ser llamados por la ESTRATEGIA (Mutex Puro) ---
     public void updateGraphGeneratorRequestingLock() {
         if (drawingPanel != null && currentStrategy instanceof SleepingBarberPureMutexStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showGeneratorRequestingLock_Barber());
@@ -198,7 +190,6 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
         }
     }
 
-    // --- NUEVOS MÉTODOS (Semáforos) ---
     public void updateGraphCustomerRequestingAccessSemaphore() {
         if (drawingPanel != null && currentStrategy instanceof SleepingBarberSemaphoreStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showCustomerRequestingAccessSemaphore_Barber());
@@ -289,7 +280,7 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
         }
     }
 
-    // --- NUEVOS MÉTODOS (Variable Condición) ---
+    
     public void updateGraphCustomerRequestingLockCondition() {
         if (drawingPanel != null && currentStrategy instanceof SleepingBarberConditionStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showCustomerRequestingLockCondition_Barber());
@@ -368,7 +359,7 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
         }
     }
 
-    // --- NUEVOS MÉTODOS (Monitores) ---
+    
     public void updateGraphCustomerRequestingMonitor() {
         if (drawingPanel != null && currentStrategy instanceof SleepingBarberMonitorStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showCustomerRequestingMonitor_Barber());
@@ -447,7 +438,7 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
         }
     }
 
-    // --- NUEVOS MÉTODOS (Barreras) ---
+    
     public void updateGraphGeneratorRequestingBarrier() {
         if (drawingPanel != null && currentStrategy instanceof SleepingBarberBarrierStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showGeneratorRequestingBarrier_Barber());
@@ -495,9 +486,9 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
             SwingUtilities.invokeLater(() -> drawingPanel.showBarberFinishedCycle_Barber());
         }
     }
-    // Podríamos añadir más estados si quisiéramos refinar el grafo (ej. cliente->silla, barber->cliente)
+    
 
-    // --- MÉTODO MODIFICADO ---
+    
     @Override
     public void stopSimulation() {
         running.set(false);
@@ -513,15 +504,15 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
         return this;
     }
 
-    // --- stepAndRepaint, Posiciones, paintComponent y métodos de dibujo SIN CAMBIOS ---
-    // (Asegúrate de que el código que tenías para estos métodos esté aquí)
+    
+    
     private void stepAndRepaint() {
         List<Customer> toRemove = new ArrayList<>();
-        // Sincroniza el acceso a la lista de clientes durante la iteración y modificación
+
         synchronized (customers) {
             for (Customer c : customers) {
                 if (c == null) {
-                    continue; // Seguridad extra
+                    continue; 
                 }
                 double vx = c.tx - c.x, vy = c.ty - c.y;
                 double dist = Math.hypot(vx, vy);
@@ -529,18 +520,18 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
                 if (dist > 1) {
                     c.x += vx / dist * Math.min(speed, dist);
                     c.y += vy / dist * Math.min(speed, dist);
-                } else if (c.state == CustState.LEAVING && dist <= 1) { // Condición más precisa
+                } else if (c.state == CustState.LEAVING && dist <= 1) { 
                     toRemove.add(c);
-                    c.state = CustState.DONE; // Marcar como hecho antes de remover
+                    c.state = CustState.DONE; 
                 }
             }
             customers.removeAll(toRemove);
         }
-        repaint(); // Solicita redibujado (ocurrirá en el EDT)
+        repaint(); 
     }
 
     public Point seatPos(int idx) {
-        int w = getWidth() > 0 ? getWidth() : 600; // Valores por defecto
+        int w = getWidth() > 0 ? getWidth() : 600; 
         int h = getHeight() > 0 ? getHeight() : 400;
         return new Point((int) (w * 0.18) + idx * 44, (int) (h * 0.22));
     }
@@ -558,7 +549,7 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         int w = getWidth(), h = getHeight();
 
-        // Título
+
         if (!methodTitle.isEmpty()) {
             g2.setFont(getFont().deriveFont(Font.BOLD, 18f));
             String t = "Barbero Dormilón (" + methodTitle + ")";
@@ -566,7 +557,7 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
             g2.drawString(t, (w - tw) / 2, (int) (h * 0.06));
         }
 
-        // Tienda
+
         int shopX = (int) (w * 0.07), shopY = (int) (h * 0.10);
         int shopW = (int) (w * 0.86), shopH = (int) (h * 0.78);
         g2.setColor(new Color(250, 250, 250));
@@ -575,28 +566,28 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
         g2.setStroke(new BasicStroke(2f));
         g2.drawRoundRect(shopX, shopY, shopW, shopH, 16, 16);
 
-        // Sillas de espera (accede a 'seats' de forma segura)
+        
         synchronized (seats) {
             for (int i = 0; i < MAX_WAIT_CHAIRS; i++) {
                 drawChair(g2, seatPos(i).x, seatPos(i).y - 18, 28, 26, seats[i] != null);
             }
         }
 
-        // Silla del barbero
+
         drawBarberChair(g2, chairPos().x, chairPos().y);
 
-        // Clientes (accede a 'customers' de forma segura)
+        
         synchronized (customers) {
-            // Crea una copia para evitar ConcurrentModificationException si stepAndRepaint modifica la lista
+
             List<Customer> customersCopy = new ArrayList<>(customers);
             for (Customer c : customersCopy) {
-                if (c != null) { // Chequeo null
+                if (c != null) { 
                     drawCustomer(g2, c);
                 }
             }
         }
 
-        // Estado Zzz... (lee variable volátil)
+        
         if (barberState == BarberState.SLEEPING) {
             g2.setFont(new Font("SansSerif", Font.BOLD, 14));
             g2.drawString("Zzz...", chairPos().x + 35, chairPos().y - 15);
@@ -610,32 +601,32 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
         g2.fillRoundRect(x - w / 2, y - h / 2, w, h, 6, 6);
         g2.setColor(Color.BLACK);
         g2.drawRoundRect(x - w / 2, y - h / 2, w, h, 6, 6);
-        // Patas
+
         g2.drawLine(x - w / 2 + 4, y + h / 2, x - w / 2 + 4, y + h / 2 + 10);
         g2.drawLine(x + w / 2 - 4, y + h / 2, x + w / 2 - 4, y + h / 2 + 10);
     }
 
     private void drawBarberChair(Graphics2D g2, int x, int y) {
         g2.setColor(new Color(235, 235, 235));
-        g2.fillRoundRect(x - 28, y - 18, 56, 36, 10, 10); // Asiento
+        g2.fillRoundRect(x - 28, y - 18, 56, 36, 10, 10); 
         g2.setColor(Color.BLACK);
         g2.drawRoundRect(x - 28, y - 18, 56, 36, 10, 10);
-        g2.drawLine(x, y + 18, x, y + 32); // Poste
-        g2.drawOval(x - 20, y + 32, 40, 10); // Base
+        g2.drawLine(x, y + 18, x, y + 32); 
+        g2.drawOval(x - 20, y + 32, 40, 10); 
     }
 
     private void drawCustomer(Graphics2D g2, Customer c) {
         if (c == null) {
-            return; // Chequeo null
+            return; 
         }
         int r = CUSTOMER_SIZE / 2;
-        // Usa las coordenadas actuales del cliente
+
         int drawX = (int) c.x;
         int drawY = (int) c.y;
-        g2.setColor(c.color != null ? c.color : Color.GRAY); // Color por defecto si es null
+        g2.setColor(c.color != null ? c.color : Color.GRAY); 
         g2.fillOval(drawX - r, drawY - r, CUSTOMER_SIZE, CUSTOMER_SIZE);
         g2.setColor(Color.BLACK);
         g2.drawOval(drawX - r, drawY - r, CUSTOMER_SIZE, CUSTOMER_SIZE);
     }
 
-} // Fin de la clase SleepingBarberSim
+} 

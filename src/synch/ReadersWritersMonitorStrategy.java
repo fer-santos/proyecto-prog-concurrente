@@ -80,7 +80,7 @@ public class ReadersWritersMonitorStrategy implements ReadersWritersStrategy {
                 }
             }
         } finally {
-            // Executor cleanup handled in stop()
+            
         }
     }
 

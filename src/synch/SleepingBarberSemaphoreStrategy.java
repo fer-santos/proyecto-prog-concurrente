@@ -48,7 +48,7 @@ public class SleepingBarberSemaphoreStrategy implements SynchronizationStrategy 
                 sleepRand(800, 1800);
             }
         } finally {
-            // El hilo termina cuando stop() interrumpe la espera
+            
         }
     }
 

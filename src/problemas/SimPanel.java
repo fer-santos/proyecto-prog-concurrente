@@ -1,15 +1,13 @@
-// Archivo: SimPanel.java (dentro del paquete problemas)
-// --------------------------------------------------------
-package problemas; // <-- AÑADE ESTA LÍNEA
+
+package problemas;
 
 import core.DrawingPanel;
 import javax.swing.JComponent;
-// import ProyectoPCyP.SyncMethod; // <-- AÑADE ESTE IMPORT
 
-// Interfaz para unificar todos los paneles de simulación
+
 public interface SimPanel {
     void showSkeleton();
-    void startWith(SyncMethod method); // <-- Usa el tipo calificado
+    void startWith(SyncMethod method);
     void stopSimulation();
     JComponent getComponent();
     

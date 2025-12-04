@@ -56,7 +56,7 @@ public class ReadersWritersMutexStrategy implements ReadersWritersStrategy {
                 }
             }
         } finally {
-            // No-op cleanup; executor shutdown handled in stop()
+            
         }
     }
 

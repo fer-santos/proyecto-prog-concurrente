@@ -6,31 +6,26 @@ import java.awt.geom.Line2D;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.*;
 import synch.*;
-// --- IMPORTACIÓN CORRECTA ---
 import core.DrawingPanel;
 
 public class PhilosophersSim extends JPanel implements SimPanel {
 
-    public static final int N = 5; // Number of philosophers/chopsticks
+    public static final int N = 5;
 
     public enum State {
         THINKING, HUNGRY, EATING
     }
 
-    // --- Simulation State ---
     public final AtomicBoolean running = new AtomicBoolean(false);
-    public final State[] state = new State[N]; // State of each philosopher
-    public final int[] chopstickOwner = new int[N]; // -1 if free, philosopher ID if taken
+    public final State[] state = new State[N]; 
+    public final int[] chopstickOwner = new int[N]; 
 
-    // --- UI and Strategy ---
     private final Timer repaintTimer = new Timer(60, e -> repaint());
     private String methodTitle = "";
     private SynchronizationStrategy currentStrategy;
 
-    // --- NUEVO CAMPO ---
     private DrawingPanel drawingPanel = null;
 
-    // --- NUEVO MÉTODO IMPLEMENTADO ---
     @Override
     public void setDrawingPanel(DrawingPanel drawingPanel) {
         this.drawingPanel = drawingPanel;
@@ -38,7 +33,7 @@ public class PhilosophersSim extends JPanel implements SimPanel {
 
     public PhilosophersSim() {
         setBackground(new Color(238, 238, 238));
-        resetState(); // Initialize state on creation
+        resetState(); 
     }
 
     private void resetState() {
@@ -48,31 +43,28 @@ public class PhilosophersSim extends JPanel implements SimPanel {
         }
     }
 
-    // --- MÉTODO MODIFICADO ---
     @Override
     public void showSkeleton() {
-        stopSimulation(); // Stop threads, clear strategy
+        stopSimulation();
         methodTitle = "";
-        resetState();    // Reset logic state
-        clearRagGraph(); // Clear associated RAG graph
-        repaint();       // Repaint this simulation panel
+        resetState();    
+        clearRagGraph(); 
+        repaint();       
     }
 
-    // --- NUEVO MÉTODO AUXILIAR ---
     private void clearRagGraph() {
         if (drawingPanel != null) {
             SwingUtilities.invokeLater(() -> drawingPanel.clearGraph());
         }
     }
 
-    // --- MÉTODO MODIFICADO ---
     @Override
     public void startWith(SyncMethod method) {
         stopSimulation();
-        clearRagGraph(); // Clear graph at the beginning
-        resetState();    // Reset logic state
+        clearRagGraph(); 
+        resetState();    
 
-        // --- Logic for Title ---
+        
         if (method == SyncMethod.MUTEX) {
             methodTitle = "Mutex";
         } else if (method == SyncMethod.SEMAPHORES) {
@@ -91,11 +83,11 @@ public class PhilosophersSim extends JPanel implements SimPanel {
             methodTitle = "Desconocido";
         }
 
-        // --- Setup Initial RAG Graph ---
+        
         if (drawingPanel != null) {
             SwingUtilities.invokeLater(() -> {
                 if (method == SyncMethod.MUTEX) {
-                    // Call a specific setup method (to be created in DrawingPanel)
+                    
                     drawingPanel.setupPhilosophersGraph_Mutex();
                 } else if (method == SyncMethod.SEMAPHORES) {
                     drawingPanel.setupPhilosophersGraph_Semaphore();
@@ -110,15 +102,15 @@ public class PhilosophersSim extends JPanel implements SimPanel {
                 } else if (method == SyncMethod.PHIL_HOARE) {
                     drawingPanel.setupPhilosophersGraph_HoareDemo();
                 }
-                // Add setups for other methods later
-                // else if (method == SyncMethod.SEMAPHORES) { drawingPanel.setupPhilosophersGraph_Semaphore(); }
-                // etc...
+
+                
+                
             });
         }
 
-        running.set(true); // Mark as running
+        running.set(true); 
 
-        // --- Strategy Logic ---
+        
         SynchronizationStrategy tempStrategy = null;
         if (method == SyncMethod.MUTEX) {
             tempStrategy = new PhilosophersMutexStrategy(this);
@@ -139,19 +131,19 @@ public class PhilosophersSim extends JPanel implements SimPanel {
         currentStrategy = tempStrategy;
 
         if (currentStrategy != null) {
-            currentStrategy.start(); // Start strategy threads
-            repaintTimer.start(); // Start repaint timer for this panel
+            currentStrategy.start(); 
+            repaintTimer.start(); 
         } else {
             System.err.println("Synchronization method not implemented: " + method);
             methodTitle = "NO IMPLEMENTADO";
             running.set(false);
             repaint();
-            clearRagGraph(); // Clean graph if no strategy found
+            clearRagGraph(); 
         }
     }
 
-    // --- NEW METHODS to be called by the STRATEGY (Mutex) ---
-    // These will call corresponding methods in DrawingPanel (to be created)
+    
+    
     public void updateGraphPhilosopherRequestingLock(int philosopherId) {
         if (drawingPanel != null && currentStrategy instanceof PhilosophersMutexStrategy) {
             SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherRequestingLock_Mutex("P" + philosopherId));
@@ -379,18 +371,16 @@ public class PhilosophersSim extends JPanel implements SimPanel {
             SwingUtilities.invokeLater(() -> drawingPanel.showPhilosopherReleaseForksDemo("P" + philosopherId, "F" + leftFork, "F" + rightFork));
         }
     }
-    // For other strategies, we'll need different update methods (e.g., requesting/holding individual forks)
 
-    // --- MÉTODO MODIFICADO ---
     @Override
     public void stopSimulation() {
-        running.set(false); // Stops the while loops in threads
+        running.set(false); 
         if (currentStrategy != null) {
-            currentStrategy.stop(); // Calls interrupt() on threads
-            currentStrategy = null; // Releases the strategy
+            currentStrategy.stop();
+            currentStrategy = null; 
         }
-        repaintTimer.stop(); // Stops repainting this panel
-        // Do not clear graph here
+        repaintTimer.stop(); 
+
     }
 
     @Override
@@ -398,7 +388,7 @@ public class PhilosophersSim extends JPanel implements SimPanel {
         return this;
     }
 
-    // --- paintComponent method WITHOUT CHANGES ---
+    
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -407,7 +397,7 @@ public class PhilosophersSim extends JPanel implements SimPanel {
         int w = getWidth(), h = getHeight();
         int cx = w / 2, cy = (int) (h * 0.47);
 
-        // Title
+
         if (!methodTitle.isEmpty()) {
             g2.setFont(getFont().deriveFont(Font.BOLD, 18f));
             String title = "Cena de los Filósofos (" + methodTitle + ")";
@@ -415,7 +405,7 @@ public class PhilosophersSim extends JPanel implements SimPanel {
             g2.drawString(title, (w - tw) / 2, (int) (h * 0.06));
         }
 
-        // Table
+
         int tableR = Math.min(w, h) / 3;
         g2.setColor(new Color(245, 245, 245));
         g2.fill(new Ellipse2D.Double(cx - tableR, cy - tableR, tableR * 2, tableR * 2));
@@ -423,69 +413,64 @@ public class PhilosophersSim extends JPanel implements SimPanel {
         g2.setStroke(new BasicStroke(3f));
         g2.draw(new Ellipse2D.Double(cx - tableR, cy - tableR, tableR * 2, tableR * 2));
 
-        // Center Bowl
+
         int bowlR = (int) (tableR * 0.22);
         g2.setColor(new Color(230, 220, 150));
         g2.fill(new Ellipse2D.Double(cx - bowlR, cy - bowlR, bowlR * 2, bowlR * 2));
         g2.setColor(Color.DARK_GRAY);
         g2.draw(new Ellipse2D.Double(cx - bowlR, cy - bowlR, bowlR * 2, bowlR * 2));
 
-        // Philosophers' Plates and States
+        
         double angleStep = 2 * Math.PI / N;
         int plateR = (int) (tableR * 0.25);
-        int dishR = (int) (plateR * 0.55); // Inner circle for state color
+        int dishR = (int) (plateR * 0.55); 
         for (int i = 0; i < N; i++) {
-            double ang = -Math.PI / 2 + i * angleStep; // Start from top
-            int px = cx + (int) (Math.cos(ang) * (tableR - plateR - 10)); // Position on table edge
+            double ang = -Math.PI / 2 + i * angleStep; 
+            int px = cx + (int) (Math.cos(ang) * (tableR - plateR - 10)); 
             int py = cy + (int) (Math.sin(ang) * (tableR - plateR - 10));
 
-            // Plate
+
             g2.setColor(Color.WHITE);
             g2.fill(new Ellipse2D.Double(px - plateR, py - plateR, plateR * 2, plateR * 2));
             g2.setColor(Color.BLACK);
             g2.draw(new Ellipse2D.Double(px - plateR, py - plateR, plateR * 2, plateR * 2));
-            g2.draw(new Ellipse2D.Double(px - dishR, py - dishR, dishR * 2, dishR * 2)); // Inner rim
+            g2.draw(new Ellipse2D.Double(px - dishR, py - dishR, dishR * 2, dishR * 2)); 
 
-            // Label (P0, P1, ...)
             g2.setFont(getFont().deriveFont(Font.BOLD, 16f));
             String label = "P" + i;
             int labelW = g2.getFontMetrics().stringWidth(label);
-            g2.drawString(label, px - labelW / 2, py - plateR - 8); // Above plate
+            g2.drawString(label, px - labelW / 2, py - plateR - 8); 
 
-            // State color - read volatile array once per philosopher
             State currentState = this.state[i];
             switch (currentState) {
                 case THINKING:
                     g2.setColor(new Color(120, 180, 255, 70));
-                    break; // Light Blue
+                    break; 
                 case HUNGRY:
                     g2.setColor(new Color(255, 165, 0, 70));
-                    break; // Orange
+                    break; 
                 case EATING:
                     g2.setColor(new Color(0, 200, 120, 90));
-                    break; // Green
+                    break; 
             }
-            g2.fill(new Ellipse2D.Double(px - dishR, py - dishR, dishR * 2, dishR * 2)); // Fill inner circle
+            g2.fill(new Ellipse2D.Double(px - dishR, py - dishR, dishR * 2, dishR * 2)); 
         }
 
-        // Chopsticks
+
         g2.setStroke(new BasicStroke(5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         for (int i = 0; i < N; i++) {
-            // Position between philosopher i and (i+N-1)%N
             double midAng = -Math.PI / 2 + i * angleStep - angleStep / 2.0;
-            int radius = tableR - plateR + 6; // Just outside the plates
-            int x1 = cx + (int) (Math.cos(midAng) * (radius - 18)); // Inner end
+            int radius = tableR - plateR + 6; 
+            int x1 = cx + (int) (Math.cos(midAng) * (radius - 18)); 
             int y1 = cy + (int) (Math.sin(midAng) * (radius - 18));
-            int x2 = cx + (int) (Math.cos(midAng) * (radius + 22)); // Outer end
+            int x2 = cx + (int) (Math.cos(midAng) * (radius + 22)); 
             int y2 = cy + (int) (Math.sin(midAng) * (radius + 22));
 
-            // Color based on owner - read volatile array once per chopstick
             boolean isFree = (this.chopstickOwner[i] == -1);
-            g2.setColor(isFree ? new Color(60, 160, 60) : new Color(200, 60, 60)); // Green if free, Red if taken
             g2.draw(new Line2D.Double(x1, y1, x2, y2));
         }
 
         g2.dispose();
     }
 
-} // Fin de la clase PhilosophersSim
+} 

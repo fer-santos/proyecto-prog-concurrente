@@ -2,27 +2,27 @@ package synch;
 
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.locks.ReentrantLock; // Aún necesitamos un lock para proteger el acceso a 'level'
+import java.util.concurrent.locks.ReentrantLock; 
 import problemas.WaterTankSim;
 
-/**
- * Implementación "forzada" de Barreras para el Productor-Consumidor. Utiliza
- * CyclicBarrier para hacer que productor y consumidor esperen el uno al otro
- * después de cada operación. Esto NO es eficiente ni la forma natural de
- * resolver este problema, pero cumple el requisito de usar barreras. Se
- * necesita un lock adicional para proteger el acceso concurrente a la variable
- * 'level'.
- */
+
+
+
+
+
+
+
+
 public class WaterTankBarrierStrategy implements SynchronizationStrategy {
 
     private final WaterTankSim panel;
     private Thread producer, consumer;
 
-    // Barrera para 2 participantes (productor y consumidor)
+    
     private CyclicBarrier barrier;
 
-    // Mutex para proteger el acceso directo a panel.level
-    // (Necesario porque la barrera no protege la modificación en sí)
+    
+    
     private final ReentrantLock levelLock = new ReentrantLock();
     private static final long VISUALIZATION_DELAY = 420L;
 
@@ -32,9 +32,9 @@ public class WaterTankBarrierStrategy implements SynchronizationStrategy {
 
     @Override
     public void start() {
-        barrier = new CyclicBarrier(2); // Barrera para Productor y Consumidor
+        barrier = new CyclicBarrier(2); 
 
-        // --- Hilo Productor ---
+        
         producer = new Thread(() -> {
             try {
                 while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
@@ -73,7 +73,7 @@ public class WaterTankBarrierStrategy implements SynchronizationStrategy {
             }
         }, "Producer-Barrier-Visual");
 
-        // --- Hilo Consumidor ---
+        
         consumer = new Thread(() -> {
             try {
                 while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
@@ -118,8 +118,8 @@ public class WaterTankBarrierStrategy implements SynchronizationStrategy {
 
     @Override
     public void stop() {
-        // Interrumpir los hilos hará que fallen en barrier.await() o Thread.sleep()
-        // y terminen su ejecución.
+        
+        
         if (producer != null) {
             producer.interrupt();
         }

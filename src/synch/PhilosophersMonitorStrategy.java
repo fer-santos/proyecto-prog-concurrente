@@ -5,21 +5,21 @@ import java.util.concurrent.locks.ReentrantLock;
 import problemas.PhilosophersSim;
 import problemas.PhilosophersSim.State;
 
-/**
- * Implementación del patrón Monitor (según Hoare) para la Cena de los Filósofos.
- * Utiliza ReentrantLock y un array de Condition (una por filósofo).
- * Un filósofo solo come si está HAMBRIENTO y sus vecinos NO están COMIENDO.
- * Si no puede comer, hace await() en su propia condición.
- * Al terminar, hace test() a sus vecinos para despertarlos si ahora pueden comer.
- */
+
+
+
+
+
+
+
 public class PhilosophersMonitorStrategy implements SynchronizationStrategy {
 
     private final PhilosophersSim panel;
     private final Thread[] threads = new Thread[PhilosophersSim.N];
     
-    // --- Componentes del Monitor ---
-    private ReentrantLock lock; // Mutex para exclusión [cite: 99]
-    private Condition[] self;   // Una variable de condición por filósofo [cite: 53]
+    
+    private ReentrantLock lock; 
+    private Condition[] self;   
     private static final long VISUALIZATION_DELAY = 420L;
 
     public PhilosophersMonitorStrategy(PhilosophersSim panel) {
@@ -61,15 +61,15 @@ public class PhilosophersMonitorStrategy implements SynchronizationStrategy {
                     panel.updateGraphPhilosopherReleasingMonitor(id, left, right);
                     panel.updateGraphPhilosopherExitMonitor(id);
                 }
-            }, "Philosopher-Monitor-" + id); // Nombre del hilo
+            }, "Philosopher-Monitor-" + id); 
             threads[i].setDaemon(true);
             threads[i].start();
         }
     }
 
-    /**
-     * Procedimiento del monitor para tomar los tenedores.
-     */
+    
+
+
     private void pickup(int id) throws InterruptedException {
         panel.updateGraphPhilosopherRequestingMonitor(id);
         boolean locked = false;
@@ -104,9 +104,9 @@ public class PhilosophersMonitorStrategy implements SynchronizationStrategy {
         }
     }
 
-    /**
-     * Procedimiento del monitor para soltar los tenedores.
-     */
+    
+
+
     private void drop(int id) throws InterruptedException {
         panel.updateGraphPhilosopherRequestingMonitor(id);
         boolean locked = false;
@@ -136,11 +136,11 @@ public class PhilosophersMonitorStrategy implements SynchronizationStrategy {
         }
     }
 
-    /**
-     * Método auxiliar interno del monitor.
-     * Comprueba si el filósofo 'id' PUEDE comer AHORA y lo despierta si es así.
-     * Solo debe llamarse con el lock adquirido.
-     */
+    
+
+
+
+
     private void test(int id) {
         int left = (id + PhilosophersSim.N - 1) % PhilosophersSim.N;
         int right = (id + 1) % PhilosophersSim.N;
@@ -151,12 +151,12 @@ public class PhilosophersMonitorStrategy implements SynchronizationStrategy {
         {
             panel.state[id] = State.EATING;
             
-            // Actualiza visualizador (toma tenedor izq 'id' y der '(id+1)%N')
+            
             panel.chopstickOwner[id] = id;
             panel.chopstickOwner[(id + 1) % PhilosophersSim.N] = id;
             
-            // Despierta al filósofo 'id' que podría estar esperando en self[id].await()
-            self[id].signal(); // [cite: 47, 112]
+            
+            self[id].signal(); 
         }
     }
 

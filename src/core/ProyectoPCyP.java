@@ -5,24 +5,24 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.*;
-import problemas.*; // Importamos todas las clases de problemas
-import problemas.SimPanel; // <-- AÑADE ESTE IMPORT
-import problemas.Problem;       // <-- AÑADE ESTA LÍNEA
-import problemas.SyncMethod;  // <-- AÑADE ESTA LÍNEA
+import problemas.*; 
+import problemas.SimPanel;
+import problemas.Problem;
+import problemas.SyncMethod;
 import core.DrawingPanel;
 
 public class ProyectoPCyP extends JFrame {
 
     private Problem selectedProblem = Problem.NONE;
 
-    // ===== Menús =====
+    
     private JMenuItem mutex, semaforos, varCon, monitores, barreras;
     private JMenuItem prodConsum, cenaFilosofos, barberoDormilon, fumadores, lectoresEscritores, asistentesVirtuales;
     private JMenuItem deadlockRun, deadlockEdit;
     private JMenuItem graficaAcordeon, graficaCarrusel, graficaScroll;
     private JMenu graficaMenu;
 
-    // ===== UI general =====
+    
     private final JPanel leftPanel;
     private final DrawingPanel drawing;
     private final JFileChooser chooser = new JFileChooser();
@@ -43,7 +43,7 @@ public class ProyectoPCyP extends JFrame {
 
         setupMenus();
 
-        // ---- Paneles 30% | 70% ----
+        
         leftPanel = new JPanel(new BorderLayout());
         leftPanel.setBackground(new Color(240, 240, 240));
         drawing = new DrawingPanel();
@@ -116,7 +116,7 @@ public class ProyectoPCyP extends JFrame {
     barra.add(deadlockMenu);
         setJMenuBar(barra);
 
-        // Acciones Archivo
+
         nuevo.addActionListener(e -> {
             int r = JOptionPane.showConfirmDialog(this, "¿Iniciar nuevo documento? Se perderán cambios no guardados.", "Nuevo", JOptionPane.OK_CANCEL_OPTION);
             if (r == JOptionPane.OK_OPTION) {
@@ -133,7 +133,7 @@ public class ProyectoPCyP extends JFrame {
     }
 
     private void setupActions() {
-        // ---- Menú Problemas ----
+        
         prodConsum.addActionListener(e -> selectProblem(Problem.PRODUCERS, new WaterTankSim()));
         cenaFilosofos.addActionListener(e -> selectProblem(Problem.PHILOSOPHERS, new PhilosophersSim()));
         barberoDormilon.addActionListener(e -> selectProblem(Problem.BARBER, new SleepingBarberSim()));
@@ -141,25 +141,25 @@ public class ProyectoPCyP extends JFrame {
         lectoresEscritores.addActionListener(e -> selectProblem(Problem.READERS_WRITERS, new ReadersWritersSim()));
         asistentesVirtuales.addActionListener(e -> selectProblem(Problem.VIRTUAL_ASSISTANTS, new VirtualAssistantsSim()));
 
-        // ---- Menú Synch ----
+        
         mutex.addActionListener(e -> selectMethod(SyncMethod.MUTEX));
         semaforos.addActionListener(e -> selectMethod(SyncMethod.SEMAPHORES));
         varCon.addActionListener(e -> selectMethod(SyncMethod.VAR_COND));
-        monitores.addActionListener(e -> selectMethod(SyncMethod.MONITORS)); // <-- LÍNEA MODIFICADA
-        barreras.addActionListener(e -> selectMethod(SyncMethod.BARRIERS)); // <-- LÍNEA MODIFICADA
+        monitores.addActionListener(e -> selectMethod(SyncMethod.MONITORS)); 
+        barreras.addActionListener(e -> selectMethod(SyncMethod.BARRIERS)); 
 
-        // ---- Menú Gráfica ----
+        
         graficaAcordeon.addActionListener(e -> handleChartAction(DrawingPanel.ChartKind.ACORDEON));
         graficaCarrusel.addActionListener(e -> handleChartAction(DrawingPanel.ChartKind.CARROUSEL));
         graficaScroll.addActionListener(e -> handleChartAction(DrawingPanel.ChartKind.SCROLL));
 
-        // ---- Menú Deadlock ----
+        
         deadlockRun.addActionListener(e -> runDeadlockScenario(false));
         deadlockEdit.addActionListener(e -> runDeadlockScenario(true));
     }
 
     private void methodNotImplementedYet(String name) {
-        // Ya no debería llamarse si todos los botones están conectados
+
         if (selectedProblem == Problem.NONE) {
             JOptionPane.showMessageDialog(this, "Primero selecciona un problema.", "Aviso", JOptionPane.INFORMATION_MESSAGE);
             if (drawing != null) {
@@ -188,7 +188,7 @@ public class ProyectoPCyP extends JFrame {
         }
 
         if (currentSim != null) {
-            currentSim.setDrawingPanel(this.drawing); // Pasa la referencia
+            currentSim.setDrawingPanel(this.drawing); 
         }
 
         leftPanel.add(currentSim.getComponent(), BorderLayout.CENTER);
@@ -196,10 +196,10 @@ public class ProyectoPCyP extends JFrame {
         leftPanel.repaint();
 
         if (drawing != null) {
-            drawing.clearGraph(); // Limpia grafo
+            drawing.clearGraph(); 
         }
         if (currentSim != null) {
-            currentSim.showSkeleton(); // Muestra esqueleto (que también limpia grafo)
+            currentSim.showSkeleton(); 
         }
     }
 
@@ -207,11 +207,11 @@ public class ProyectoPCyP extends JFrame {
         if (selectedProblem == Problem.NONE || currentSim == null) {
             JOptionPane.showMessageDialog(this, "Primero selecciona un problema (menú Problemas).", "Selecciona un problema", JOptionPane.WARNING_MESSAGE);
             if (drawing != null) {
-                drawing.clearGraph(); // Limpia grafo
+                drawing.clearGraph(); 
             }
             return;
         }
-        // El setup del grafo se hará dentro de startWith del SimPanel
+
         currentSim.startWith(method);
     }
 

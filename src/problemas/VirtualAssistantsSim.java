@@ -244,7 +244,7 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
             int tokenIndex = -1;
             int slotIndex = -1;
             try {
-                // Pausa inicial simulando llegada de consulta
+
                 transition(agent, AssistantState.IDLE);
                 Thread.sleep(350 + local.nextInt(500));
 

@@ -4,18 +4,18 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import problemas.WaterTankSim;
 
-/**
- * Implementación del patrón Monitor (según Hoare) para el Productor-Consumidor.
- * Utiliza ReentrantLock para la exclusión mutua y Condition para wait/signal.
- */
+
+
+
+
 public class WaterTankMonitorStrategy implements SynchronizationStrategy {
     private final WaterTankSim panel;
     private Thread producer, consumer;
 
-    // --- Componentes del Monitor ---
-    private ReentrantLock lock; // Mutex para exclusión
-    private Condition notEmpty; // Condición para esperar si está vacío
-    private Condition notFull;  // Condición para esperar si está lleno
+    
+    private ReentrantLock lock; 
+    private Condition notEmpty; 
+    private Condition notFull;  
     private static final long VISUALIZATION_DELAY = 420L;
 
     public WaterTankMonitorStrategy(WaterTankSim panel) {
@@ -28,7 +28,7 @@ public class WaterTankMonitorStrategy implements SynchronizationStrategy {
         notEmpty = lock.newCondition();
         notFull = lock.newCondition();
 
-        // --- Hilo Productor ---
+        
         producer = new Thread(() -> {
             try {
                 while (panel.running.get() && !Thread.currentThread().isInterrupted()) {
@@ -76,7 +76,7 @@ public class WaterTankMonitorStrategy implements SynchronizationStrategy {
             }
         }, "Producer-Monitor-Visual");
 
-        // --- Hilo Consumidor ---
+        
         consumer = new Thread(() -> {
             try {
                 while (panel.running.get() && !Thread.currentThread().isInterrupted()) {

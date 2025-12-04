@@ -2,9 +2,9 @@ package synch;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * Funcionalidad compartida por las estrategias de Asistentes Virtuales.
- */
+
+
+
 public abstract class VirtualAssistantsBaseStrategy implements VirtualAssistantsStrategy {
 
     protected final int slots;
