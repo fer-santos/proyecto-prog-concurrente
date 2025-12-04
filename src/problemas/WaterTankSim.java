@@ -61,7 +61,7 @@ public class WaterTankSim extends JPanel implements SimPanel {
 
         // --- Lógica de Título Actualizada ---
         if (method == SyncMethod.MUTEX) {
-            methodTitle = "Mutex (Espera Activa)";
+            methodTitle = "Mutex";
         } else if (method == SyncMethod.SEMAPHORES) {
             methodTitle = "Semáforos";
         } else if (method == SyncMethod.VAR_COND) {

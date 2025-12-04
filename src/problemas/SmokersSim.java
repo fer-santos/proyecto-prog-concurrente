@@ -76,15 +76,15 @@ public class SmokersSim extends JPanel implements SimPanel {
 
         // --- Lógica de Título Actualizada ---
         if (method == SyncMethod.MUTEX) {
-            methodTitle = "Mutex (Espera Activa)";
+            methodTitle = "Mutex";
         } else if (method == SyncMethod.SEMAPHORES) {
-            methodTitle = "Semáforos (Agente)";
+            methodTitle = "Semáforos)";
         } else if (method == SyncMethod.VAR_COND) {
             methodTitle = "Variable Condición";
         } else if (method == SyncMethod.MONITORS) {
             methodTitle = "Monitores";
         } else if (method == SyncMethod.BARRIERS) {
-            methodTitle = "Barreras (Rondas)"; // Ajustado el título
+            methodTitle = "Barreras"; // Ajustado el título
         } else {
             methodTitle = "Desconocido";
         }

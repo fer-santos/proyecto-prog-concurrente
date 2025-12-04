@@ -96,7 +96,7 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
 
         // --- Lógica de Título ---
         if (method == SyncMethod.MUTEX) {
-            methodTitle = "Mutex (Espera Activa)";
+            methodTitle = "Mutex";
         } else if (method == SyncMethod.SEMAPHORES) {
             methodTitle = "Semáforos";
         } else if (method == SyncMethod.VAR_COND) {
@@ -104,7 +104,7 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
         } else if (method == SyncMethod.MONITORS) {
             methodTitle = "Monitores";
         } else if (method == SyncMethod.BARRIERS) {
-            methodTitle = "Barreras (Turnos)";
+            methodTitle = "Barreras";
         } else {
             methodTitle = "Desconocido";
         }

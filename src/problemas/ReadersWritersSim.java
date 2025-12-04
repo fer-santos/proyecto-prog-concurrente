@@ -114,15 +114,15 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
 
         // --- Lógica de Título ---
         if (method == SyncMethod.MUTEX) {
-            methodTitle = "Mutex (Solo 1 a la vez)";
+            methodTitle = "Mutex";
         } else if (method == SyncMethod.SEMAPHORES) {
-            methodTitle = "Semáforos (Pref. Lectores)";
+            methodTitle = "Semáforos";
         } else if (method == SyncMethod.VAR_COND) {
             methodTitle = "Variable Condición";
         } else if (method == SyncMethod.MONITORS) {
             methodTitle = "Monitores";
         } else if (method == SyncMethod.BARRIERS) {
-            methodTitle = "Barreras (Artificial)";
+            methodTitle = "Barreras";
         } else {
             methodTitle = "Desconocido";
         }
