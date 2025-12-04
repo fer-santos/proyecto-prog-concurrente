@@ -91,6 +91,7 @@ public class SleepingBarberSim extends JPanel implements SimPanel {
     // --- MÉTODO MODIFICADO ---
     @Override
     public void startWith(SyncMethod method) {
+        stopSimulation();
         clearRagGraph(); // Limpia grafo al inicio
         resetState();    // Reinicia estado lógico
 

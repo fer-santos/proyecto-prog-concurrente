@@ -30,6 +30,9 @@ import core.DrawingPanel;
 
 public class ReadersWritersSim extends JPanel implements SimPanel {
 
+    private static final int MAX_READERS = 5;
+    private static final int MAX_WRITERS = 5;
+
     public enum Role {
         READER, WRITER
     }
@@ -109,6 +112,7 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
     // --- MÉTODO MODIFICADO ---
     @Override
     public void startWith(SyncMethod method) {
+        stopSimulation();
         clearRagGraph(); // Limpia grafo al inicio
         resetState();    // Reinicia estado lógico
 
@@ -633,6 +637,26 @@ public class ReadersWritersSim extends JPanel implements SimPanel {
     // Método para asignar un ID único al Actor cuando se crea
     public int getNextActorId() {
         return nextActorId++;
+    }
+
+    public boolean tryAddActor(Actor actor) {
+        if (actor == null) {
+            return false;
+        }
+        synchronized (actors) {
+            int limit = actor.role == Role.READER ? MAX_READERS : MAX_WRITERS;
+            int count = 0;
+            for (Actor existing : actors) {
+                if (existing != null && existing.role == actor.role && existing.state != AState.DONE) {
+                    count++;
+                }
+            }
+            if (count >= limit) {
+                return false;
+            }
+            actors.add(actor);
+            return true;
+        }
     }
 
     // --- MÉTODO MODIFICADO ---

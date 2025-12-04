@@ -75,7 +75,9 @@ public class ReadersWritersSemaphoreStrategy implements ReadersWritersStrategy {
         actor.y = panel.getHeight() * 0.75 + (Math.random() * 40 - 20);
         actor.tx = (role == Role.READER) ? panel.getWidth() - 80 : 80;
         actor.ty = actor.y;
-        panel.actors.add(actor);
+        if (!panel.tryAddActor(actor)) {
+            return;
+        }
     }
 
     @Override

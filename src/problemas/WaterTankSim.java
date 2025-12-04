@@ -52,8 +52,8 @@ public class WaterTankSim extends JPanel implements SimPanel {
     // --- MÉTODO MODIFICADO ---
     @Override
     public void startWith(SyncMethod method) {
-        // stopSimulation() ya no es necesario aquí si showSkeleton() lo hace
-        // y showSkeleton se llama desde selectProblem
+        // Siempre detenemos una corrida previa para evitar hilos superpuestos
+        stopSimulation();
 
         // Limpia el grafo antes de configurar el nuevo estado
         clearRagGraph();

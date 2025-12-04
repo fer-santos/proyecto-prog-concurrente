@@ -24,6 +24,7 @@ public class ReadersWritersConditionStrategy implements ReadersWritersStrategy {
     private int readersActive;
     private boolean writerActive;
     private int writersWaiting;
+    private boolean preferWriter;
 
     public ReadersWritersConditionStrategy(ReadersWritersSim panel) {
         this.panel = panel;
@@ -34,6 +35,7 @@ public class ReadersWritersConditionStrategy implements ReadersWritersStrategy {
         readersActive = 0;
         writerActive = false;
         writersWaiting = 0;
+        preferWriter = false;
         panel.readersWaiting = 0;
         panel.writersWaiting = 0;
         panel.readersActive = 0;
@@ -91,7 +93,9 @@ public class ReadersWritersConditionStrategy implements ReadersWritersStrategy {
         actor.y = panel.getHeight() * 0.75 + (Math.random() * 40 - 20);
         actor.tx = (role == Role.READER) ? panel.getWidth() - 80 : 80;
         actor.ty = actor.y;
-        panel.actors.add(actor);
+        if (!panel.tryAddActor(actor)) {
+            return;
+        }
     }
 
     @Override
@@ -130,7 +134,7 @@ public class ReadersWritersConditionStrategy implements ReadersWritersStrategy {
             panel.updateGraphReaderHoldingLockCondition(actor.id);
             ensure(sleepVisualization());
 
-            while (writerActive || writersWaiting > 0) {
+            while (writerActive || (preferWriter && writersWaiting > 0)) {
                 panel.readersWaiting++;
                 try {
                     panel.updateGraphReaderWaitingCondition(actor.id);
@@ -177,6 +181,7 @@ public class ReadersWritersConditionStrategy implements ReadersWritersStrategy {
             panel.readersActive = readersActive;
 
             if (readersActive == 0) {
+                preferWriter = true;
                 if (writersWaiting > 0) {
                     panel.updateGraphReaderSignalingWriterCondition(actor.id);
                     ensure(sleepVisualization());
@@ -220,6 +225,7 @@ public class ReadersWritersConditionStrategy implements ReadersWritersStrategy {
             while (readersActive > 0 || writerActive) {
                 writersWaiting++;
                 panel.writersWaiting = writersWaiting;
+                preferWriter = true;
                 try {
                     panel.updateGraphWriterWaitingCondition(actor.id);
                     ensure(sleepVisualization());
@@ -264,6 +270,7 @@ public class ReadersWritersConditionStrategy implements ReadersWritersStrategy {
 
             writerActive = false;
             panel.writerActive = false;
+            preferWriter = false;
 
             if (writersWaiting > 0) {
                 panel.updateGraphWriterSignalingWriterCondition(actor.id);

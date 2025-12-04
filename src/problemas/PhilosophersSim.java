@@ -68,6 +68,7 @@ public class PhilosophersSim extends JPanel implements SimPanel {
     // --- MÉTODO MODIFICADO ---
     @Override
     public void startWith(SyncMethod method) {
+        stopSimulation();
         clearRagGraph(); // Clear graph at the beginning
         resetState();    // Reset logic state
 

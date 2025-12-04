@@ -70,7 +70,7 @@ public class SmokersSim extends JPanel implements SimPanel {
     // --- MÉTODO MODIFICADO ---
     @Override
     public void startWith(SyncMethod method) {
-        // stopSimulation() se llama implícitamente via showSkeleton desde selectProblem
+        stopSimulation();
         clearRagGraph(); // Limpia grafo al inicio de seleccionar método
         resetState();    // Reinicia estado lógico
 
