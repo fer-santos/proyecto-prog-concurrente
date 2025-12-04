@@ -41,6 +41,7 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
     private static final Color LOW_PRIORITY_COLOR = new Color(0x1A, 0x9C, 0x82);
     private static final Color SERVER_COLOR = new Color(0x24, 0x3C, 0x5A);
     private static final Color TOKEN_COLOR = new Color(0xFF, 0xA0, 0x27);
+    private static final long TOKEN_PULSE_DURATION_MS = 900;
 
     public enum AssistantState {
         IDLE, WAITING_TOKEN, HAS_TOKEN, WAITING_SLOT, PROCESSING, RESPONDING, RESTING
@@ -93,6 +94,7 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
     private final Random random = new Random();
     private final EnumSet<SyncMethod> trackedChartMethods = EnumSet.noneOf(SyncMethod.class);
     private final ChartSimulationPool chartPool = new ChartSimulationPool();
+    private final List<TokenPulse> tokenPulses = new ArrayList<>();
 
     private DrawingPanel drawingPanel;
     private VirtualAssistantsStrategy currentStrategy;
@@ -146,6 +148,7 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
         skeletonVisible = true;
         methodTitle = "Asistentes Virtuales";
         resetAgentsToIdle();
+        tokenPulses.clear();
         if (drawingPanel != null) {
             drawingPanel.setupVirtualAssistantsGraph(ASSISTANT_COUNT, SERVER_SLOTS, PRIORITY_TOKENS);
         }
@@ -195,6 +198,7 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
             currentStrategy = null;
         }
         currentMethod = SyncMethod.NONE;
+        tokenPulses.clear();
         updatePerformanceTimer();
     }
 
@@ -434,6 +438,7 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
         if (drawingPanel == null) {
             return;
         }
+        tokenPulses.add(new TokenPulse(agent));
         SwingUtilities.invokeLater(() -> drawingPanel.showVirtualAssistantTokenGranted(agent.getLabel()));
     }
 
@@ -639,6 +644,7 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
         g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 13f));
         g2.setColor(Color.DARK_GRAY);
         g2.drawString("Tokens de prioridad", startX, y - 10);
+        List<Point2D> centers = new ArrayList<>();
         for (int i = 0; i < PRIORITY_TOKENS; i++) {
             int bx = startX + i * (boxWidth + spacing);
             g2.setColor(TOKEN_COLOR);
@@ -646,7 +652,9 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
             g2.setColor(Color.DARK_GRAY);
             g2.drawRoundRect(bx, y, boxWidth, boxWidth, 10, 10);
             g2.drawString("T" + (i + 1), bx + 8, y + boxWidth / 2 + 4);
+            centers.add(new Point2D.Double(bx + boxWidth / 2.0, y + boxWidth / 2.0));
         }
+        drawTokenPulses(g2, centers);
     }
 
     private void drawQueues(Graphics2D g2, int width, int height) {
@@ -693,6 +701,66 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
         g2.drawString(methodTitle, (width - textWidth) / 2, 34);
         if (skeletonVisible) {
             g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 14f));
+        }
+    }
+
+    private void drawTokenPulses(Graphics2D g2, List<Point2D> tokenCenters) {
+        if (tokenCenters.isEmpty() || tokenPulses.isEmpty()) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        tokenPulses.removeIf(pulse -> now - pulse.createdAt > TOKEN_PULSE_DURATION_MS);
+        if (tokenPulses.isEmpty()) {
+            return;
+        }
+        g2.setStroke(new BasicStroke(2f));
+        for (TokenPulse pulse : tokenPulses) {
+            int tokenIndex = pulse.agent.assignedToken;
+            if (tokenIndex < 0 || tokenIndex >= tokenCenters.size()) {
+                continue;
+            }
+            Point2D tokenPoint = tokenCenters.get(tokenIndex);
+            Point2D agentPoint = new Point2D.Double(pulse.agent.x, pulse.agent.y);
+            float alpha = (float) Math.max(0.0, 1.0 - (now - pulse.createdAt) / (double) TOKEN_PULSE_DURATION_MS);
+            Color arrowColor = new Color(255, 160, 39, (int) (alpha * 255));
+            drawArrow(g2, agentPoint, tokenPoint, arrowColor);
+        }
+    }
+
+    private void drawArrow(Graphics2D g2, Point2D from, Point2D to, Color color) {
+        if (from == null || to == null) {
+            return;
+        }
+        double dx = to.getX() - from.getX();
+        double dy = to.getY() - from.getY();
+        double distance = Math.hypot(dx, dy);
+        if (distance < 1.0) {
+            return;
+        }
+        double ux = dx / distance;
+        double uy = dy / distance;
+        double startX = from.getX() + ux * 14;
+        double startY = from.getY() + uy * 14;
+        double endX = to.getX() - ux * 18;
+        double endY = to.getY() - uy * 18;
+        g2.setColor(color);
+        g2.drawLine((int) startX, (int) startY, (int) endX, (int) endY);
+        double arrowSize = 8;
+        double angle = Math.atan2(endY - startY, endX - startX);
+        double x1 = endX - arrowSize * Math.cos(angle - Math.PI / 6);
+        double y1 = endY - arrowSize * Math.sin(angle - Math.PI / 6);
+        double x2 = endX - arrowSize * Math.cos(angle + Math.PI / 6);
+        double y2 = endY - arrowSize * Math.sin(angle + Math.PI / 6);
+        g2.fillPolygon(new int[]{(int) endX, (int) x1, (int) x2}, new int[]{(int) endY, (int) y1, (int) y2}, 3);
+    }
+
+    private static final class TokenPulse {
+        final AssistantAgent agent;
+        final long createdAt;
+
+        TokenPulse(AssistantAgent agent) {
+            this.agent = agent;
+            this.createdAt = System.currentTimeMillis();
         }
     }
 }
