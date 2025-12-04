@@ -66,11 +66,6 @@ public class VirtualAssistantsBarrierStrategy extends VirtualAssistantsBaseStrat
 
     @Override
     public int acquireServerSlot(AssistantAgent agent) throws InterruptedException {
-        if (!agent.isHighPriority()) {
-            while (highBatchPending.get() > 0 && isRunning()) {
-                Thread.sleep(8);
-            }
-        }
         awaitBarrier();
         slotSemaphore.acquire();
         return takeSlot();
