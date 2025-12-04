@@ -25,6 +25,7 @@ import java.awt.RenderingHints;
 import java.awt.geom.Point2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -94,7 +95,7 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
     private final Random random = new Random();
     private final EnumSet<SyncMethod> trackedChartMethods = EnumSet.noneOf(SyncMethod.class);
     private final ChartSimulationPool chartPool = new ChartSimulationPool();
-    private final List<TokenPulse> tokenPulses = new ArrayList<>();
+    private final List<TokenPulse> tokenPulses = Collections.synchronizedList(new ArrayList<>());
 
     private DrawingPanel drawingPanel;
     private VirtualAssistantsStrategy currentStrategy;
@@ -705,16 +706,23 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
     }
 
     private void drawTokenPulses(Graphics2D g2, List<Point2D> tokenCenters) {
-        if (tokenCenters.isEmpty() || tokenPulses.isEmpty()) {
+        if (tokenCenters.isEmpty()) {
             return;
         }
+        List<TokenPulse> snapshot;
         long now = System.currentTimeMillis();
-        tokenPulses.removeIf(pulse -> now - pulse.createdAt > TOKEN_PULSE_DURATION_MS);
-        if (tokenPulses.isEmpty()) {
-            return;
+        synchronized (tokenPulses) {
+            if (tokenPulses.isEmpty()) {
+                return;
+            }
+            tokenPulses.removeIf(pulse -> now - pulse.createdAt > TOKEN_PULSE_DURATION_MS);
+            if (tokenPulses.isEmpty()) {
+                return;
+            }
+            snapshot = new ArrayList<>(tokenPulses);
         }
         g2.setStroke(new BasicStroke(2f));
-        for (TokenPulse pulse : tokenPulses) {
+        for (TokenPulse pulse : snapshot) {
             int tokenIndex = pulse.agent.assignedToken;
             if (tokenIndex < 0 || tokenIndex >= tokenCenters.size()) {
                 continue;
