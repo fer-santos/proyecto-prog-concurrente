@@ -105,6 +105,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     private XYSeriesCollection chartDataset;
     private final EnumMap<SyncMethod, XYSeries> vaSeries = new EnumMap<>(SyncMethod.class);
     private final EnumMap<SyncMethod, Double> vaXCursors = new EnumMap<>(SyncMethod.class);
+    private double vaTimelineCursor = 0.0;
     private XYLineAndShapeRenderer chartRenderer;
     private static final Map<SyncMethod, Color> VA_METHOD_COLORS = Map.of(
             SyncMethod.MUTEX, new Color(0x66, 0x66, 0x66),
@@ -453,6 +454,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
             vaXCursors.clear();
             chartDataset = new XYSeriesCollection();
             chartXCursor = 0.0;
+            vaTimelineCursor = 0.0;
             JFreeChart chart = buildVirtualAssistantsChart(kind, chartDataset);
             mountChart(chart, kind, true, "Comparativa multi-núcleo", Color.DARK_GRAY, true);
             updateVirtualAssistantSeriesColors();
@@ -689,14 +691,23 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
         return Math.max(0.1, value);
     }
 
-    public synchronized void appendVirtualAssistantPerformanceSample(SyncMethod method, double value) {
+    public synchronized double advanceVirtualAssistantTimeline() {
+        vaTimelineCursor += CHART_STEP;
+        return vaTimelineCursor;
+    }
+
+    public synchronized void resetVirtualAssistantTimeline() {
+        vaTimelineCursor = 0.0;
+    }
+
+    public synchronized void appendVirtualAssistantPerformanceSample(SyncMethod method, double value, double timePoint) {
         if (chartDataMode != ChartDataMode.VIRTUAL_ASSISTANTS || chartDataset == null || method == null || method == SyncMethod.NONE) {
             return;
         }
         XYSeries series = vaSeries.computeIfAbsent(method, this::createVirtualAssistantSeries);
-        double currentX = vaXCursors.getOrDefault(method, 0.0);
+        double currentX = timePoint;
         series.add(currentX, value);
-        vaXCursors.put(method, currentX + CHART_STEP);
+        vaXCursors.put(method, currentX);
         trimVirtualAssistantSeries(series);
         updateVirtualAssistantSeriesColors();
         updateAccordionAxisBounds();
@@ -707,7 +718,7 @@ public class DrawingPanel extends JPanel implements MouseListener, MouseMotionLi
     private XYSeries createVirtualAssistantSeries(SyncMethod method) {
         XYSeries s = new XYSeries(methodDisplayName(method));
         chartDataset.addSeries(s);
-        vaXCursors.put(method, 0.0);
+        vaXCursors.put(method, vaTimelineCursor);
         return s;
     }
 

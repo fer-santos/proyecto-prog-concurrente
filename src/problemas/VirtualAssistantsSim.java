@@ -300,12 +300,13 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
             return;
         }
         chartPool.ensureRunning(trackedChartMethods);
+        double timePoint = drawingPanel.advanceVirtualAssistantTimeline();
         for (SyncMethod method : trackedChartMethods) {
             int completed = chartPool.drainCompleted(method);
             double base = performanceMultiplier(method);
             double noise = random.nextGaussian() * 0.25;
             double value = Math.max(0.1, completed * base + noise);
-            drawingPanel.appendVirtualAssistantPerformanceSample(method, value);
+            drawingPanel.appendVirtualAssistantPerformanceSample(method, value, timePoint);
         }
     }
 
