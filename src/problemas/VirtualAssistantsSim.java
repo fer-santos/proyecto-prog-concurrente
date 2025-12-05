@@ -35,9 +35,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class VirtualAssistantsSim extends JPanel implements SimPanel {
 
-    private static final int ASSISTANT_COUNT = 6;
-    private static final int SERVER_SLOTS = 3;
-    private static final int PRIORITY_TOKENS = 2;
+    private static final int ASSISTANT_COUNT = readPositiveSystemProperty("va.assistants", 8);
+    private static final int SERVER_SLOTS = readPositiveSystemProperty("va.slots", 3);
+    private static final int PRIORITY_TOKENS = readPositiveSystemProperty("va.tokens", 2);
     private static final Color HIGH_PRIORITY_COLOR = new Color(0x6C, 0x63, 0xF5);
     private static final Color LOW_PRIORITY_COLOR = new Color(0x1A, 0x9C, 0x82);
     private static final Color SERVER_COLOR = new Color(0x24, 0x3C, 0x5A);
@@ -114,6 +114,19 @@ public class VirtualAssistantsSim extends JPanel implements SimPanel {
         performanceTimer.setCoalesce(true);
         performanceTimer.setInitialDelay(900);
         createAgents();
+    }
+
+    private static int readPositiveSystemProperty(String key, int defaultValue) {
+        String raw = System.getProperty(key);
+        if (raw == null || raw.isBlank()) {
+            return defaultValue;
+        }
+        try {
+            int parsed = Integer.parseInt(raw.trim());
+            return parsed > 0 ? parsed : defaultValue;
+        } catch (NumberFormatException ex) {
+            return defaultValue;
+        }
     }
 
     private void createAgents() {

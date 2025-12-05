@@ -1,5 +1,7 @@
 # Proyecto Programación Concurrente y Paralela (Manual de Uso)
 
+**Gordillo Santos Fernando**
+
 ## 1. Introducción
 
 El proyecto **ProyectoPCyP** es un laboratorio gráfico para explorar problemas clásicos de concurrencia. Cada problema cuenta con:
